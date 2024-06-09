@@ -48,8 +48,8 @@ bool Storage::IsIdentInit(const std::string &ident) {
 size_t Storage::GetStackPosition(const std::string &ident) {
     size_t ret_value = stack_size;
 
-    for(uint64_t i = variables.size() + 1; i > 0; i--){
-        Variable var = variables.at(i - 2);
+    for(uint64_t i = variables.size(); i > 0; i--){
+        Variable var = variables.at(i - 1);
 
         if(var.ident == ident)
             return ret_value;

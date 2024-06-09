@@ -10,10 +10,10 @@
 #include "Token.h"
 #include "Parser.h"
 #include "Generator.h"
+#include "Assemble.h"
 
 struct Arguments{
     int target;
-    int mode;
     std::string input_file;
     std::string output_file;
 };
@@ -59,23 +59,6 @@ Arguments parseProgramArguments(int argc, char* argv[]){
                 exit(1);
             }
         }
-        else if(std::string(argv[i]) == "-m"){
-            i++;
-            if(std::string(argv[i]) == "dist"){
-                temp.mode = DIST;
-            }
-            else if(std::string(argv[i]) == "release"){
-                temp.mode = RELEASE;
-            }
-            else if(std::string(argv[i]) == "debug"){
-                temp.mode = DEBUG;
-            }
-            else{
-                // FIXME
-                Log::Error("Expected either `debug`, `release` or `dist` as the mode for the final executable");
-                exit(1);
-            }
-        }
         else{
             std::string s = std::string(argv[i]);
             Log::Error("Unknown program argument flag name `" + s + "`");
@@ -108,6 +91,8 @@ int main(int argc, char* argv[]){
 
     std::vector<Token> tokens;
 
+    std::vector<std::string> links;
+
     {
         Tokenizer tokenizer(content);
         tokens = tokenizer.tokenize();
@@ -115,11 +100,12 @@ int main(int argc, char* argv[]){
     {
         Parser parser(tokens);
         Node::Program* prg = parser.parse();
-        Generator generator(prg, args.target, args.mode);
+        Generator generator(prg, args.target);
         content = generator.Generate();
+        links = generator.GetLinkPrograms();
     }
 
-    Log::Error(content);
+    Assemble assemble(content, links, args.output_file, args.target);
 
     return 0;
 }

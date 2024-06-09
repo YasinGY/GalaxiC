@@ -17,4 +17,6 @@ add_executable(GalaxiC src/main.cpp
         src/Core.h
         src/Log.h
         src/Generator.cpp
+        src/Assemble.h
+        src/Assemble.cpp
 )

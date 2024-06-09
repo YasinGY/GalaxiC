@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include <memory>
+#include <cassert>
 
 #include "Core.h"
 #include "Node.h"
@@ -11,7 +12,7 @@
 
 class Generator{
 public:
-    Generator(Node::Program* p, const int t, const int m) : prg(p), target(t), mode(m) {}
+    Generator(Node::Program* p, const int t) : prg(p), target(t) {}
 
     std::string Generate();
     std::vector<std::string> GetLinkPrograms();
@@ -25,12 +26,13 @@ private:
         std::stringstream text;
     };
 
-    void GenTerm(Node::Term* term);
-    void GenExpr(Node::Expr* expr); // output will be stored in rax
+    void GenTerm(const Node::Term* term, const std::string reg);
+    void GenExpr(const Node::Expr* expr, const std::string reg);
+    void GenBinExpr(const Node::BinExpr* expr);
 
     Node::Program* prg;
     std::vector<std::string> prg_links;
     AsmStructure code;
+    Storage storage;
     int target;
-    int mode;
 };
