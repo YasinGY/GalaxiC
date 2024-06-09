@@ -96,9 +96,10 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
             div->rhs = expr_rhs;
             expr->expr = div;
         } else if (op == TokenType::percent) {
-            // TODO: Handle the modulo operator when implemented
-            Log::Info("Feature not implemented yet!");
-            exit(1);
+            auto modulo = m_allocator.alloc<Node::BinExprMod>();
+            modulo->lhs = lhs;
+            modulo->rhs = expr_rhs;
+            expr->expr = modulo;
         } else {
             Log::Error("Failed to parse the int expression!");
             exit(1);

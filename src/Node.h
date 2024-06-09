@@ -50,8 +50,13 @@ namespace Node{
         Expr* rhs;
     };
 
+    struct BinExprMod{
+        Expr* lhs;
+        Expr* rhs;
+    };
+
     struct BinExpr{
-        std::variant<BinExprAdd*, BinExprSub*, BinExprMul*, BinExprDiv*> expr;
+        std::variant<BinExprAdd*, BinExprSub*, BinExprMul*, BinExprDiv*, BinExprMod*> expr;
     };
 
     struct Expr{

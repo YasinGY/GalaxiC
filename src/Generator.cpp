@@ -47,93 +47,98 @@ void Generator::GenBinExpr(const Node::BinExpr* expr) {
         BinExprVisitor(Generator& generator) : gen(generator) {}
 
         void operator()(const Node::BinExprMul* expr){
-            gen.GenExpr(expr->lhs, "rax");
-            gen.GenExpr(expr->rhs, "rcx");
             switch(gen.target) {
                 case PLATFORM_WIN32:
                 case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->lhs, "eax");
+                    gen.GenExpr(expr->rhs, "ecx");
                     gen.code.text << "mul ecx\n";
                     break;
                 case PLATFORM_LINUX64:
                 case PLATFORM_WIN64:
+                    gen.GenExpr(expr->lhs, "rax");
+                    gen.GenExpr(expr->rhs, "rcx");
                     gen.code.text << "mul rcx\n";
                     break;
             }
         }
 
         void operator()(const Node::BinExprDiv* expr){
-            gen.GenExpr(expr->lhs, "rax");
             switch(gen.target) {
                 case PLATFORM_WIN32:
                 case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->lhs, "eax");
                     gen.code.text << "xor edx, edx\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.code.text << "xor rdx, rdx\n";
-                    break;
-            }
-            gen.GenExpr(expr->rhs, "rcx");
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->rhs, "rcx");
                     gen.code.text << "div ecx\n";
                     break;
                 case PLATFORM_LINUX64:
                 case PLATFORM_WIN64:
+                    gen.GenExpr(expr->lhs, "rax");
+                    gen.code.text << "xor rdx, rdx\n";
+                    gen.GenExpr(expr->rhs, "rcx");
                     gen.code.text << "div rcx\n";
                     break;
             }
         }
 
         void operator()(const Node::BinExprAdd* expr){
-            gen.GenExpr(expr->lhs, "rax");
             switch(gen.target) {
                 case PLATFORM_WIN32:
                 case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->lhs, "eax");
                     gen.code.text << "mov ebx, eax\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.code.text << "mov rbx, rax\n";
-                    break;
-            }
-            gen.GenExpr(expr->rhs, "rax");
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->rhs, "eax");
                     gen.code.text << "add eax, ebx\n";
                     break;
                 case PLATFORM_LINUX64:
                 case PLATFORM_WIN64:
+                    gen.GenExpr(expr->lhs, "rax");
+                    gen.code.text << "mov rbx, rax\n";
+                    gen.GenExpr(expr->rhs, "rax");
                     gen.code.text << "add rax, rbx\n";
                     break;
             }
         }
 
         void operator()(const Node::BinExprSub* expr){
-            gen.GenExpr(expr->lhs, "rax");
             switch(gen.target) {
                 case PLATFORM_WIN32:
                 case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->lhs, "eax");
                     gen.code.text << "mov ebx, eax\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.code.text << "mov rbx, rax\n";
-                    break;
-            }
-            gen.GenExpr(expr->rhs, "rax");
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->rhs, "eax");
                     gen.code.text << "sub ebx, eax\n";
                     gen.code.text << "mov eax, ebx\n";
                     break;
                 case PLATFORM_LINUX64:
                 case PLATFORM_WIN64:
+                    gen.GenExpr(expr->lhs, "eax");
+                    gen.code.text << "mov rbx, rax\n";
+                    gen.GenExpr(expr->rhs, "rax");
                     gen.code.text << "sub rbx, rax\n";
                     gen.code.text << "mov rax, rbx\n";
+                    break;
+            }
+        }
+
+        void operator()(const Node::BinExprMod* expr){
+            switch(gen.target) {
+                case PLATFORM_WIN32:
+                case PLATFORM_LINUX32:
+                    gen.GenExpr(expr->lhs, "eax");
+                    gen.code.text << "xor edx, edx\n";
+                    gen.GenExpr(expr->rhs, "rcx");
+                    gen.code.text << "div ecx\n";
+                    gen.code.text << "mov eax, edx\n";
+                    break;
+                case PLATFORM_LINUX64:
+                case PLATFORM_WIN64:
+                    gen.GenExpr(expr->lhs, "rax");
+                    gen.code.text << "xor rdx, rdx\n";
+                    gen.GenExpr(expr->rhs, "rcx");
+                    gen.code.text << "div rcx\n";
+                    gen.code.text << "mov rax, rdx\n";
                     break;
             }
         }
