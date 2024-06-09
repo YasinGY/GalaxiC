@@ -1,9 +1,9 @@
 #include "Storage.h"
 
-void Storage::StoreVariable(const std::string& ident, const std::string& value, VarType type) {
+void Storage::StoreVariable(const std::string& ident, bool init, VarType type) {
     Variable var;
     var.ident = ident;
-    var.init = value == "";
+    var.init = init;
 
     switch(type){
         case VarType::_char: // db

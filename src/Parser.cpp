@@ -186,6 +186,7 @@ Node::Program *Parser::parse() {
                         var->type = VarType::_int64;
 
                     var->expr->var = term;
+                    var->ident = ident;
                     program.prg.emplace_back(Node::Stmt{var});
                     continue;
                 }
@@ -198,6 +199,7 @@ Node::Program *Parser::parse() {
                         auto var = m_allocator.alloc<Node::Variable>();
                         var->type = VarType::_int32;
                         var->expr = expr;
+                        var->ident = ident;
                         program.prg.emplace_back(Node::Stmt{var});
                         continue;
                     }

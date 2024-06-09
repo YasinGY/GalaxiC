@@ -113,7 +113,7 @@ void Generator::GenBinExpr(const Node::BinExpr* expr) {
                     break;
                 case PLATFORM_LINUX64:
                 case PLATFORM_WIN64:
-                    gen.GenExpr(expr->lhs, "eax");
+                    gen.GenExpr(expr->lhs, "rax");
                     gen.code.text << "mov rbx, rax\n";
                     gen.GenExpr(expr->rhs, "rax");
                     gen.code.text << "sub rbx, rax\n";
@@ -199,7 +199,38 @@ std::string Generator::Generate() {
         }
 
         void operator()(Node::Variable* stmt){
-            assert(false);
+            gen.storage.StoreVariable(stmt->ident->value, gen.isExprInit(stmt->expr), stmt->type);
+
+            switch(gen.target) {
+                case PLATFORM_WIN32:
+                case PLATFORM_LINUX32:
+                    gen.GenExpr(stmt->expr, "eax");
+                    break;
+                case PLATFORM_LINUX64:
+                case PLATFORM_WIN64:
+                    gen.GenExpr(stmt->expr, "rax");
+                    break;
+            }
+
+            switch(stmt->type){
+                case VarType::_char:
+                    gen.push("BYTE", "ax");
+                    break;
+                case VarType::_int16:
+                    gen.push("WORD", "ax");
+                    break;
+                case VarType::_int32:
+                case VarType::_float:
+                    gen.push("DWORD", "ax");
+                    break;
+                case VarType::_int64:
+                case VarType::_double:
+                    gen.push("QWORD", "ax");
+                    break;
+                case VarType::_string:
+                    Log::Error("string not implemented");
+                    exit(1);
+            }
         }
     };
 
@@ -213,4 +244,32 @@ std::string Generator::Generate() {
 
 std::vector<std::string> Generator::GetLinkPrograms() {
     return std::vector<std::string>();
+}
+
+bool Generator::isExprInit(const Node::Expr *expr) {
+    if(!std::holds_alternative<Node::Term*>(expr->var))
+        return true;
+
+    auto term = std::get<Node::Term*>(expr->var);
+    if(!std::holds_alternative<Node::Ident*>(term->term))
+        return true;
+
+    auto ident = std::get<Node::Ident*>(term->term);
+    if(ident->value != "")
+        return true;
+
+    return false;
+}
+
+void Generator::push(const std::string& size, const std::string &reg) {
+    switch(target){
+        case PLATFORM_LINUX32:
+        case PLATFORM_WIN32:
+            code.text << "push " << size << " e" << reg << "\n";
+            break;
+        case PLATFORM_LINUX64:
+        case PLATFORM_WIN64:
+            code.text << "push " << size << " r" << reg << "\n";
+            break;
+    }
 }

@@ -4,7 +4,7 @@
 #include <variant>
 #include <vector>
 
-#include "Storage.h"
+#include "Variable.h"
 #include "Token.h"
 
 namespace Node{
@@ -70,6 +70,7 @@ namespace Node{
     struct Variable{
         VarType type;
         Expr* expr;
+        Ident* ident;
     };
 
     struct Link{

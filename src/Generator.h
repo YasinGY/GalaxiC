@@ -29,6 +29,9 @@ private:
     void GenTerm(const Node::Term* term, const std::string reg);
     void GenExpr(const Node::Expr* expr, const std::string reg);
     void GenBinExpr(const Node::BinExpr* expr);
+    bool isExprInit(const Node::Expr* expr);
+    // size means like DWORD, WORD or QWORD
+    void push(const std::string& size, const std::string& reg); // register should never be rax or eax, only ax. 32/64-bit will be dealt with in the function
 
     Node::Program* prg;
     std::vector<std::string> prg_links;
