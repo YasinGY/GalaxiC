@@ -26,5 +26,5 @@ private:
     };
 
     std::vector<Variable> variables;
-    uint64_t stack_size;
+    uint64_t stack_size = 0;
 };

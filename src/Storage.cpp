@@ -28,6 +28,7 @@ void Storage::StoreVariable(const std::string& ident, bool init, VarType type) {
 //            var.size = value.length();
 //            break;
     }
+    variables.emplace_back(var);
 }
 bool Storage::IdentExists(const std::string &ident) {
     for(Variable var : variables)
@@ -46,7 +47,7 @@ bool Storage::IsIdentInit(const std::string &ident) {
     exit(1);
 }
 size_t Storage::GetStackPosition(const std::string &ident) {
-    size_t ret_value = stack_size;
+    size_t ret_value = 0;
 
     for(uint64_t i = variables.size(); i > 0; i--){
         Variable var = variables.at(i - 1);
@@ -54,7 +55,7 @@ size_t Storage::GetStackPosition(const std::string &ident) {
         if(var.ident == ident)
             return ret_value;
 
-        ret_value -= var.size;
+        ret_value += var.size;
     }
 
     Log::Error("Ident was not found in the variables in function GetStackPosition");

@@ -28,16 +28,8 @@ void Generator::GenTerm(const Node::Term *term, const std::string reg) {
             exit(1);
         }
 
-        switch(target){
-            case PLATFORM_WIN32:
-            case PLATFORM_LINUX32:
-                code.text << "mov eax, [esp + " << storage.GetStackPosition(ident->value) << "]\n";
-                break;
-            case PLATFORM_WIN64:
-            case PLATFORM_LINUX64:
-                code.text << "mov rax, [rsp + " << storage.GetStackPosition(ident->value) << "]\n";
-                break;
-        }
+        code.text << "mov " << bit <<
+        "ax, [" << bit << "sp + " << storage.GetStackPosition(ident->value) << "]\n";
     }
 }
 
@@ -47,100 +39,39 @@ void Generator::GenBinExpr(const Node::BinExpr* expr) {
         BinExprVisitor(Generator& generator) : gen(generator) {}
 
         void operator()(const Node::BinExprMul* expr){
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
-                    gen.GenExpr(expr->lhs, "eax");
-                    gen.GenExpr(expr->rhs, "ecx");
-                    gen.code.text << "mul ecx\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.GenExpr(expr->lhs, "rax");
-                    gen.GenExpr(expr->rhs, "rcx");
-                    gen.code.text << "mul rcx\n";
-                    break;
-            }
+            gen.GenExpr(expr->lhs, gen.bit + "ax");
+            gen.GenExpr(expr->rhs, gen.bit + "cx");
+            gen.code.text << "mul " << gen.bit << "cx\n";
         }
 
         void operator()(const Node::BinExprDiv* expr){
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
-                    gen.GenExpr(expr->lhs, "eax");
-                    gen.code.text << "xor edx, edx\n";
-                    gen.GenExpr(expr->rhs, "rcx");
-                    gen.code.text << "div ecx\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.GenExpr(expr->lhs, "rax");
-                    gen.code.text << "xor rdx, rdx\n";
-                    gen.GenExpr(expr->rhs, "rcx");
-                    gen.code.text << "div rcx\n";
-                    break;
-            }
+            gen.GenExpr(expr->lhs, gen.bit + "ax");
+            gen.code.text << "xor " << gen.bit << "dx, " << gen.bit << "dx\n";
+            gen.GenExpr(expr->rhs, gen.bit + "cx");
+            gen.code.text << "div " << gen.bit << "cx\n";
         }
 
         void operator()(const Node::BinExprAdd* expr){
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
-                    gen.GenExpr(expr->lhs, "eax");
-                    gen.code.text << "mov ebx, eax\n";
-                    gen.GenExpr(expr->rhs, "eax");
-                    gen.code.text << "add eax, ebx\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.GenExpr(expr->lhs, "rax");
-                    gen.code.text << "mov rbx, rax\n";
-                    gen.GenExpr(expr->rhs, "rax");
-                    gen.code.text << "add rax, rbx\n";
-                    break;
-            }
+            gen.GenExpr(expr->lhs, gen.bit + "ax");
+            gen.code.text << "mov " << gen.bit << "bx, " << gen.bit << "ax\n";
+            gen.GenExpr(expr->rhs, gen.bit + "ax");
+            gen.code.text << "add " << gen.bit << "ax, " << gen.bit << "bx\n";
         }
 
         void operator()(const Node::BinExprSub* expr){
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
-                    gen.GenExpr(expr->lhs, "eax");
-                    gen.code.text << "mov ebx, eax\n";
-                    gen.GenExpr(expr->rhs, "eax");
-                    gen.code.text << "sub ebx, eax\n";
-                    gen.code.text << "mov eax, ebx\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.GenExpr(expr->lhs, "rax");
-                    gen.code.text << "mov rbx, rax\n";
-                    gen.GenExpr(expr->rhs, "rax");
-                    gen.code.text << "sub rbx, rax\n";
-                    gen.code.text << "mov rax, rbx\n";
-                    break;
-            }
+            gen.GenExpr(expr->lhs, gen.bit + "ax");
+            gen.code.text << "mov " << gen.bit << "bx, " << gen.bit << "ax\n";
+            gen.GenExpr(expr->rhs, gen.bit + "ax");
+            gen.code.text << "sub " << gen.bit << "bx, " << gen.bit << "ax\n";
+            gen.code.text << "mov " << gen.bit << "ax, " << gen.bit << "bx\n";
         }
 
         void operator()(const Node::BinExprMod* expr){
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
-                    gen.GenExpr(expr->lhs, "eax");
-                    gen.code.text << "xor edx, edx\n";
-                    gen.GenExpr(expr->rhs, "rcx");
-                    gen.code.text << "div ecx\n";
-                    gen.code.text << "mov eax, edx\n";
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.GenExpr(expr->lhs, "rax");
-                    gen.code.text << "xor rdx, rdx\n";
-                    gen.GenExpr(expr->rhs, "rcx");
-                    gen.code.text << "div rcx\n";
-                    gen.code.text << "mov rax, rdx\n";
-                    break;
-            }
+            gen.GenExpr(expr->lhs, gen.bit + "ax");
+            gen.code.text << "xor " << gen.bit << "dx, " << gen.bit << "dx\n";
+            gen.GenExpr(expr->rhs, gen.bit + "cx");
+            gen.code.text << "div " << gen.bit << "cx\n";
+            gen.code.text << "mov " << gen.bit << "ax, " << gen.bit << "dx\n";
         }
     };
 
@@ -158,7 +89,7 @@ void Generator::GenExpr(const Node::Expr* expr, const std::string reg) {
 
 std::string Generator::Generate() {
     code.data << "section .data\n";
-    code.bbs << "section .bbs\n";
+    code.bbs << "section .bss\n";
     code.text << "section .text\n";
 
     /// TEMPORARY
@@ -170,25 +101,19 @@ std::string Generator::Generate() {
         ProgVisitor(Generator& generator) : gen(generator) {}
 
         void operator()(Node::Exit* stmt){
+            gen.GenExpr(stmt->expr, gen.bit + "ax");
+            if(gen.storage.GetStackSize() > 0){
+                gen.code.text << "add " << gen.bit << "sp, " << gen.storage.GetStackSize() << '\n';
+            }
+
             switch(gen.target) {
                 case PLATFORM_WIN32:
-                    gen.GenExpr(stmt->expr, "eax");
-                    gen.code.text << "ret\n";
-                    break;
                 case PLATFORM_WIN64:
-                    gen.GenExpr(stmt->expr, "rax");
                     gen.code.text << "ret\n";
                     break;
                 case PLATFORM_LINUX32:
-                    gen.GenExpr(stmt->expr, "eax");
-                    gen.code.text << "mov edi, eax\n";
-                    gen.code.text << "mov eax, 60\n";
-                    gen.code.text << "syscall\n";
-                    break;
-                case PLATFORM_LINUX64:
-                    gen.GenExpr(stmt->expr, "rax");
-                    gen.code.text << "mov rdi, rax\n";
-                    gen.code.text << "mov rax, 60\n";
+                    gen.code.text << "mov " << gen.bit << "di, " << gen.bit << "ax\n";
+                    gen.code.text << "mov " <<  gen.bit << "ax, 60\n";
                     gen.code.text << "syscall\n";
                     break;
             }
@@ -201,31 +126,32 @@ std::string Generator::Generate() {
         void operator()(Node::Variable* stmt){
             gen.storage.StoreVariable(stmt->ident->value, gen.isExprInit(stmt->expr), stmt->type);
 
-            switch(gen.target) {
-                case PLATFORM_WIN32:
-                case PLATFORM_LINUX32:
-                    gen.GenExpr(stmt->expr, "eax");
-                    break;
-                case PLATFORM_LINUX64:
-                case PLATFORM_WIN64:
-                    gen.GenExpr(stmt->expr, "rax");
-                    break;
-            }
-
             switch(stmt->type){
                 case VarType::_char:
-                    gen.push("BYTE", "ax");
+                    gen.GenExpr(stmt->expr, "al");
+                    gen.code.text << "sub " << gen.bit << "sp, 8\n";
+                    gen.code.text << "mov [" << gen.bit << "sp], al\n";
                     break;
                 case VarType::_int16:
-                    gen.push("WORD", "ax");
+                    gen.GenExpr(stmt->expr, "eax");
+                    gen.code.text << "sub " << gen.bit << "sp, 16\n";
+                    gen.code.text << "mov [" << gen.bit << "sp], ax\n";
                     break;
                 case VarType::_int32:
                 case VarType::_float:
-                    gen.push("DWORD", "ax");
+                    gen.GenExpr(stmt->expr, "eax");
+                    gen.code.text << "sub " << gen.bit << "sp, 32\n";
+                    gen.code.text << "mov [" << gen.bit << "sp], eax\n";
                     break;
                 case VarType::_int64:
                 case VarType::_double:
-                    gen.push("QWORD", "ax");
+                    if(gen.target == PLATFORM_LINUX32 || gen.target == PLATFORM_WIN32){
+                        Log::Error("You cant have an long/int64 in a 32-bit program");
+                        exit(1);
+                    }
+                    gen.GenExpr(stmt->expr, "rax");
+                    gen.code.text << "sub " << gen.bit << "sp, 64\n";
+                    gen.code.text << "mov [" << gen.bit << "sp], rax\n";
                     break;
                 case VarType::_string:
                     Log::Error("string not implemented");
@@ -259,17 +185,4 @@ bool Generator::isExprInit(const Node::Expr *expr) {
         return true;
 
     return false;
-}
-
-void Generator::push(const std::string& size, const std::string &reg) {
-    switch(target){
-        case PLATFORM_LINUX32:
-        case PLATFORM_WIN32:
-            code.text << "push " << size << " e" << reg << "\n";
-            break;
-        case PLATFORM_LINUX64:
-        case PLATFORM_WIN64:
-            code.text << "push " << size << " r" << reg << "\n";
-            break;
-    }
 }
