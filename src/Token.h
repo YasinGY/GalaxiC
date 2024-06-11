@@ -17,7 +17,7 @@ enum class TokenType{
     _import, define, link,
     // is for identifiers
     // is checked during parsing and generation
-    ident
+    ident,
 };
 
 struct Token{

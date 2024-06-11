@@ -1,0 +1,2 @@
+int variable = (38 - 14) / 4;
+exit(variable);

@@ -1,21 +1,37 @@
 #include "Parser.h"
 
 Node::Term* Parser::parseTerm()  {
-    if(tokens.at(index).type != TokenType::ident && tokens.at(index).type != TokenType::lit_int){
+    if(getNextToken() != TokenType::ident && getNextToken() != TokenType::lit_int &&
+    getNextToken() != TokenType::expr_open){
         Log::Error("Expected a term (identifier or integer literal)");
         exit(1);
     }
     Node::Term* term = m_allocator.alloc<Node::Term>();
 
-    if(tokens.at(index).type == TokenType::ident){
+    if(getNextToken() == TokenType::ident){
         Node::Ident* id = m_allocator.alloc<Node::Ident>();
         id->value = tokens.at(index).value.value();
         term->term = id;
     }
-    else{
+    else if(getNextToken() == TokenType::lit_int){
         Node::LitInt* litInt = m_allocator.alloc<Node::LitInt>();
         litInt->value = tokens.at(index).value.value();
         term->term = litInt;
+    }
+    else if(getNextToken() == TokenType::expr_open){
+        index++;
+        auto expr = parseIntExpr(0);
+        if(getNextToken() != TokenType::expr_close){
+            Log::Error("Expected an `)`");
+            exit(1);
+        }
+        auto paren = m_allocator.alloc<Node::TermParen>();
+        paren->expr = expr;
+        term->term = paren;
+    }
+    else{
+        Log::Error("Expected an int expression");
+        exit(1);
     }
 
     return term;
@@ -55,12 +71,12 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
     index++;
 
     while (true) {
-        if (index >= tokens.size() || !isBinOp(tokens.at(index).type))
+        if (index >= tokens.size() || !isBinOp(getNextToken()))
             break;
 
         checkIfLastToken("Expected a binary operator!");
 
-        TokenType op = tokens.at(index).type;
+        TokenType op = getNextToken();
         int prec = getBinPrec(op);
         if (prec < min_prec)
             break;
@@ -115,7 +131,7 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
 
 TokenType Parser::getNextToken(const bool newline) {
     if(tokens.at(index).type == TokenType::new_line) {
-        if (newline)
+        if (newline || index + 1 >= tokens.size())
             return TokenType::new_line;
         else {
             index++;
@@ -160,7 +176,20 @@ Node::Program *Parser::parse() {
         else if(getNextToken() == TokenType::_int16 || getNextToken() == TokenType::_int32 ||
                 getNextToken() == TokenType::_int64){
 
-            int bits = (getNextToken() == TokenType::_int16) ? 16 : (getNextToken() == TokenType::_int32) ? 32 : 64;
+            VarType type;
+            switch(getNextToken()){
+                case TokenType::_int16:
+                    type = VarType::_int16;
+                    break;
+                case TokenType::_int32:
+                    type = VarType::_int32;
+                    break;
+                case TokenType::_int64:
+                    type = VarType::_int64;
+                    break;
+                default:
+                    exit(1); // unreachable
+            }
             index++;
             checkIfLastToken("Expected an identifier after the \'int\' keyword for variable declaration");
 
@@ -178,13 +207,7 @@ Node::Program *Parser::parse() {
                     value->value = "";
                     term->term = value;
 
-                    if(bits == 16)
-                        var->type = VarType::_int16;
-                    else if(bits == 32)
-                        var->type = VarType::_int32;
-                    else
-                        var->type = VarType::_int64;
-
+                    var->type = type;
                     var->expr->var = term;
                     var->ident = ident;
                     program.prg.emplace_back(Node::Stmt{var});
@@ -197,7 +220,7 @@ Node::Program *Parser::parse() {
                     auto expr = parseIntExpr();
                     if(getNextToken() == TokenType::semi){
                         auto var = m_allocator.alloc<Node::Variable>();
-                        var->type = VarType::_int32;
+                        var->type = type;
                         var->expr = expr;
                         var->ident = ident;
                         program.prg.emplace_back(Node::Stmt{var});
@@ -250,6 +273,15 @@ Node::Program *Parser::parse() {
             else{
                 // TODO - hash commands
             }
+        }
+
+        // TODO - scopes
+
+        else{
+            if(getNextToken() == TokenType::new_line)
+                break;
+            Log::Error("Unexpected token");
+            exit(1);
         }
     }
 

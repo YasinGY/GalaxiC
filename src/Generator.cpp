@@ -4,16 +4,7 @@ void Generator::GenTerm(const Node::Term *term, const std::string reg) {
     if(std::holds_alternative<Node::LitInt*>(term->term)){
         std::string value = std::get<Node::LitInt*>(term->term)->value;
 
-        switch(target){
-            case PLATFORM_LINUX32:
-            case PLATFORM_WIN32:
-                code.text << "mov " << reg <<  ", " << value << "\n";
-                break;
-            case PLATFORM_WIN64:
-            case PLATFORM_LINUX64:
-                code.text << "mov " << reg << ", " << value << "\n";
-                break;
-        }
+        code.text << "mov " << reg << ", " << value << "\n";
     }
     else if(std::holds_alternative<Node::Ident*>(term->term)){
         auto ident = std::get<Node::Ident*>(term->term);
@@ -30,6 +21,10 @@ void Generator::GenTerm(const Node::Term *term, const std::string reg) {
 
         code.text << "mov " << bit <<
         "ax, [" << bit << "sp + " << storage.GetStackPosition(ident->value) << "]\n";
+    }
+    else if(std::holds_alternative<Node::TermParen*>(term->term)){
+        auto paren = std::get<Node::TermParen*>(term->term);
+        GenExpr(paren->expr, reg);
     }
 }
 
@@ -133,7 +128,7 @@ std::string Generator::Generate() {
                     gen.code.text << "mov [" << gen.bit << "sp], al\n";
                     break;
                 case VarType::_int16:
-                    gen.GenExpr(stmt->expr, "eax");
+                    gen.GenExpr(stmt->expr, "ax");
                     gen.code.text << "sub " << gen.bit << "sp, 16\n";
                     gen.code.text << "mov [" << gen.bit << "sp], ax\n";
                     break;

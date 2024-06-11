@@ -28,7 +28,8 @@ std::vector<Token> Tokenizer::tokenize() {
                     tokens.emplace_back(Token{TokenType::lit_int, buffer});
                 }
                 else if(isInTokenDict(buffer)){
-                    tokens.emplace_back(Token{TokenDict[buffer]});
+                    TokenType type = TokenDict[buffer];
+                    tokens.emplace_back(Token{type});
                 }
                 else{
                     tokens.emplace_back(Token{TokenType::ident, buffer});

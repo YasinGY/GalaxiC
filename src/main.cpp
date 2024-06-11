@@ -82,7 +82,7 @@ std::string readFile(std::string name){
     exit(1);
 }
 
-// Gxcompier test.gx -p win64 -o test.exe
+// GalaxiC test.gx -p win64 -o test.exe
 int main(int argc, char* argv[]){
     Arguments args = parseProgramArguments(argc, argv);
 

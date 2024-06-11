@@ -12,6 +12,12 @@ namespace Node{
         none = 0, add, sub, mul, div, rest
     };
 
+    struct Expr;
+
+    struct LitString{
+        std::string value;
+    };
+
     struct LitInt{
         std::string value;
     };
@@ -20,15 +26,13 @@ namespace Node{
         std::string value;
     };
 
-    struct LitString{
-        std::string value;
+    struct TermParen{
+        Expr* expr;
     };
 
     struct Term{
-        std::variant<LitInt*, Ident*> term;
+        std::variant<LitInt*, Ident*, TermParen*> term;
     };
-
-    struct Expr;
 
     struct BinExprAdd{
         Expr* lhs;
