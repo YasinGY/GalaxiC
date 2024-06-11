@@ -9,4 +9,5 @@
  *      14/5: 505 lines - start (almost)!
  *      9/6:  1140 lines - binary expression, exit and (almost) int variables!
  *      10/6: 1146 lines - fixed int variables, 8/16/32/64 bit ints, char, short, int, long!
+ *      11/6: 1178 lines - bug fixes and parentheses to binary expressions!
 */

@@ -28,6 +28,12 @@ void Storage::StoreVariable(const std::string& ident, bool init, VarType type) {
 //            var.size = value.length();
 //            break;
     }
+
+    if(scopes.size() > 0) {
+        scopes.at(scopes.size() - 1).size += var.size;
+        scopes.at(scopes.size() - 1).vars++;
+    }
+
     variables.emplace_back(var);
 }
 bool Storage::IdentExists(const std::string &ident) {
@@ -59,4 +65,12 @@ size_t Storage::GetStackPosition(const std::string &ident) {
 
     Log::Error("Ident was not found in the variables in function GetStackPosition");
     exit(1);
+}
+void Storage::CreateScope() {
+    scopes.emplace_back(Scope{0, 0});
+}
+size_t Storage::EndScope(){
+    size_t ret_value = scopes.at(scopes.size() - 1).size;
+    scopes.pop_back();
+    return ret_value;
 }

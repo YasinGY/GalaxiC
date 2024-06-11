@@ -82,20 +82,13 @@ void Generator::GenExpr(const Node::Expr* expr, const std::string reg) {
         GenBinExpr(std::get<Node::BinExpr*>(expr->var));
 }
 
-std::string Generator::Generate() {
-    code.data << "section .data\n";
-    code.bbs << "section .bss\n";
-    code.text << "section .text\n";
-
-    /// TEMPORARY
-    code.text << "global main\n";
-    code.text << "main:\n";
+void Generator::Generate(const std::vector<Node::Stmt> stmts) {
 
     struct ProgVisitor {
         Generator& gen;
         ProgVisitor(Generator& generator) : gen(generator) {}
 
-        void operator()(Node::Exit* stmt){
+        void operator()(const Node::Exit* stmt){
             gen.GenExpr(stmt->expr, gen.bit + "ax");
             if(gen.storage.GetStackSize() > 0){
                 gen.code.text << "add " << gen.bit << "sp, " << gen.storage.GetStackSize() << '\n';
@@ -114,11 +107,11 @@ std::string Generator::Generate() {
             }
         }
 
-        void operator()(Node::Link* stmt){
+        void operator()(const Node::Link* stmt){
             gen.prg_links.emplace_back(stmt->value->value);
         }
 
-        void operator()(Node::Variable* stmt){
+        void operator()(const Node::Variable* stmt){
             gen.storage.StoreVariable(stmt->ident->value, gen.isExprInit(stmt->expr), stmt->type);
 
             switch(stmt->type){
@@ -153,14 +146,20 @@ std::string Generator::Generate() {
                     exit(1);
             }
         }
+
+        void operator()(const Node::Scope* stmt){
+            gen.storage.CreateScope();
+            gen.Generate(stmt->stmts);
+            uint64_t scope_size = gen.storage.EndScope();
+            if(scope_size > 0)
+                gen.code.text << "add " << gen.bit << "sp, " << scope_size << "\n";
+        }
     };
 
-    for(Node::Stmt stmt : prg->prg) {
+    for(Node::Stmt stmt : stmts) {
         ProgVisitor visitor(*this);
         std::visit(visitor, stmt.stmt);
     }
-
-    return code.external.str() + code.data.str() + code.bbs.str() + code.text.str();
 }
 
 std::vector<std::string> Generator::GetLinkPrograms() {

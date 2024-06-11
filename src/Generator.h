@@ -23,10 +23,22 @@ public:
                 bit = 'r';
                 break;
         }
+
+        code.data << "section .data\n";
+        code.bbs << "section .bss\n";
+        code.text << "section .text\n";
+
+        /// TEMPORARY
+        code.text << "global main\n";
+        code.text << "main:\n";
+
+        Generate(prg->prg);
     }
 
-    std::string Generate();
     std::vector<std::string> GetLinkPrograms();
+    inline std::string GenerateCode() {
+        return code.bbs.str() + code.data.str() + code.external.str() + code.text.str();
+    };
 
 private:
 
@@ -41,6 +53,7 @@ private:
     void GenExpr(const Node::Expr* expr, const std::string reg);
     void GenBinExpr(const Node::BinExpr* expr);
     bool isExprInit(const Node::Expr* expr);
+    void Generate(const std::vector<Node::Stmt> stmts);
 
     Node::Program* prg;
     std::vector<std::string> prg_links;

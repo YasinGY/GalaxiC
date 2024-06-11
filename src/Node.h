@@ -81,8 +81,14 @@ namespace Node{
         LitString* value;
     };
 
+    struct Stmt;
+
+    struct Scope{
+        std::vector<Stmt> stmts;
+    };
+
     struct Stmt{
-        std::variant<Exit*, Link*, Variable*> stmt;
+        std::variant<Exit*, Link*, Variable*, Scope*> stmt;
     };
 
     struct Program{
