@@ -27,7 +27,7 @@ private:
         size_t size;
     };
     struct Scope{
-        unsigned int vars; // how many vars declared to pop of the variables vector
+        uint64_t vars; // how many vars declared to pop of the variables vector
         uint64_t size;
     };
 

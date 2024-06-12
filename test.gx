@@ -1,2 +1,6 @@
-int variable = (38 - 14) / 4;
-exit(variable);
+int variable = 4;
+{
+    int test = 5;
+}
+int test = 3;
+exit(variable - test);

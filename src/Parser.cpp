@@ -147,142 +147,165 @@ void Parser::checkIfLastToken(const char *msg) {
     }
 }
 
-/// public
+std::optional<Node::Stmt> Parser::parseStmt(){
+    if(getNextToken() == TokenType::exit){
+        checkIfLastToken("Expected an expression after exit token");
+        index++;
 
-Node::Program *Parser::parse() {
-    for(index = 0; index < tokens.size(); index++){
-        if(getNextToken() == TokenType::exit){
-            checkIfLastToken("Expected an expression after exit token");
+        if(getNextToken() == TokenType::expr_open){
+            checkIfLastToken("Expected an exit code after exit(");
             index++;
 
-            if(getNextToken() == TokenType::expr_open){
-                checkIfLastToken("Expected an exit code after exit(");
+            Node::Expr* expr = parseIntExpr();
+            if(getNextToken() == TokenType::expr_close){
+                checkIfLastToken("Expected \';\' after exit statement");
                 index++;
-
-                Node::Expr* expr = parseIntExpr();
-                if(getNextToken() == TokenType::expr_close){
-                    checkIfLastToken("Expected \';\' after exit statement");
-                    index++;
-                    if(getNextToken() == TokenType::semi){
-                        Node::Exit* e = m_allocator.alloc<Node::Exit>();
-                        e->expr = expr;
-                        program.prg.emplace_back(Node::Stmt{e});
-                        continue;
-                    }
+                if(getNextToken() == TokenType::semi){
+                    Node::Exit* e = m_allocator.alloc<Node::Exit>();
+                    e->expr = expr;
+                    return Node::Stmt{e};
                 }
             }
         }
+    }
 
-        else if(getNextToken() == TokenType::_int16 || getNextToken() == TokenType::_int32 ||
-                getNextToken() == TokenType::_int64){
+    else if(getNextToken() == TokenType::_int16 || getNextToken() == TokenType::_int32 ||
+            getNextToken() == TokenType::_int64){
 
-            VarType type;
-            switch(getNextToken()){
-                case TokenType::_int16:
-                    type = VarType::_int16;
-                    break;
-                case TokenType::_int32:
-                    type = VarType::_int32;
-                    break;
-                case TokenType::_int64:
-                    type = VarType::_int64;
-                    break;
-                default:
-                    exit(1); // unreachable
-            }
+        VarType type;
+        switch(getNextToken()){
+            case TokenType::_int16:
+                type = VarType::_int16;
+                break;
+            case TokenType::_int32:
+                type = VarType::_int32;
+                break;
+            case TokenType::_int64:
+                type = VarType::_int64;
+                break;
+            default:
+                exit(1); // unreachable
+        }
+        index++;
+        checkIfLastToken("Expected an identifier after the \'int\' keyword for variable declaration");
+
+        if(getNextToken() == TokenType::ident){
+            Node::Ident* ident = m_allocator.alloc<Node::Ident>();
+            ident->value = tokens.at(index).value.value();
             index++;
-            checkIfLastToken("Expected an identifier after the \'int\' keyword for variable declaration");
+            checkIfLastToken("Expected a \';\' or initialization of the ident");
 
-            if(getNextToken() == TokenType::ident){
-                Node::Ident* ident = m_allocator.alloc<Node::Ident>();
-                ident->value = tokens.at(index).value.value();
+            if(getNextToken() == TokenType::semi){
                 index++;
-                checkIfLastToken("Expected a \';\' or initialization of the ident");
+                auto var = m_allocator.alloc<Node::Variable>();
+                auto term = m_allocator.alloc<Node::Term>();
+                auto value = m_allocator.alloc<Node::Ident>();
+                value->value = "";
+                term->term = value;
 
+                var->type = type;
+                var->expr->var = term;
+                var->ident = ident;
+                return Node::Stmt{var};
+            }
+            else if(getNextToken() == TokenType::equal){
+                index++;
+                checkIfLastToken(std::string("Expected an int value to give to identifier \'" + ident->value + "\'").c_str());
+
+                auto expr = parseIntExpr();
                 if(getNextToken() == TokenType::semi){
-                    index++;
                     auto var = m_allocator.alloc<Node::Variable>();
-                    auto term = m_allocator.alloc<Node::Term>();
-                    auto value = m_allocator.alloc<Node::Ident>();
-                    value->value = "";
-                    term->term = value;
-
                     var->type = type;
-                    var->expr->var = term;
+                    var->expr = expr;
                     var->ident = ident;
-                    program.prg.emplace_back(Node::Stmt{var});
-                    continue;
-                }
-                else if(getNextToken() == TokenType::equal){
-                    index++;
-                    checkIfLastToken(std::string("Expected an int value to give to identifier \'" + ident->value + "\'").c_str());
-
-                    auto expr = parseIntExpr();
-                    if(getNextToken() == TokenType::semi){
-                        auto var = m_allocator.alloc<Node::Variable>();
-                        var->type = type;
-                        var->expr = expr;
-                        var->ident = ident;
-                        program.prg.emplace_back(Node::Stmt{var});
-                        continue;
-                    }
-                    else{
-                        Log::Error("Expected a \';\' after declaring an int variable");
-                        exit(1);
-                    }
+                    return Node::Stmt{var};
                 }
                 else{
-                    Log::Error("Expected a \'=\' or \';\' after giving the name of the identifier to finish the statement");
+                    Log::Error("Expected a \';\' after declaring an int variable");
                     exit(1);
                 }
             }
             else{
-                Log::Error("Expected an identifier to declare an int variable");
+                Log::Error("Expected a \'=\' or \';\' after giving the name of the identifier to finish the statement");
                 exit(1);
             }
         }
+        else{
+            Log::Error("Expected an identifier to declare an int variable");
+            exit(1);
+        }
+    }
 
-        else if(getNextToken() == TokenType::hash){
+    else if(getNextToken() == TokenType::hash){
+        index++;
+        checkIfLastToken("Expected an action name after the \'#\'");
+
+        if(getNextToken() == TokenType::link){
             index++;
-            checkIfLastToken("Expected an action name after the \'#\'");
+            checkIfLastToken("Expected a string for a link file but reached the end of file");
 
-            if(getNextToken() == TokenType::link){
+            if(getNextToken() == TokenType::lit_string){
                 index++;
-                checkIfLastToken("Expected a string for a link file but reached the end of file");
-
-                if(getNextToken() == TokenType::lit_string){
-                    index++;
-                    if(getNextToken(true) == TokenType::new_line){
-                        auto link = m_allocator.alloc<Node::Link>();
-                        auto s = m_allocator.alloc<Node::LitString>();
-                        s->value = tokens.at(index - 1).value.value();
-                        link->value = s;
-                        program.prg.emplace_back(Node::Stmt{link});
-                        continue;
-                    }
-                    else{
-                        Log::Error("Expected a new line after \'#link\' statement");
-                        exit(1);
-                    }
+                if(getNextToken(true) == TokenType::new_line){
+                    auto link = m_allocator.alloc<Node::Link>();
+                    auto s = m_allocator.alloc<Node::LitString>();
+                    s->value = tokens.at(index - 1).value.value();
+                    link->value = s;
+                    return Node::Stmt{link};
                 }
                 else{
-                    Log::Error("Expected the link file as a literal string");
+                    Log::Error("Expected a new line after \'#link\' statement");
                     exit(1);
                 }
             }
             else{
-                // TODO - hash commands
+                Log::Error("Expected the link file as a literal string");
+                exit(1);
             }
         }
-
-        // TODO - scopes
-
         else{
-            if(getNextToken() == TokenType::new_line)
-                break;
-            Log::Error("Unexpected token");
+            // TODO - hash commands
+        }
+    }
+
+    else if(getNextToken() == TokenType::scope_open){
+        checkIfLastToken("Un-closed scope, expected `}`");
+
+        auto scope = m_allocator.alloc<Node::Scope>();
+        index++;
+        while(auto stmt = parseStmt()){
+            scope->stmts.emplace_back(stmt.value());
+            index++;
+        }
+
+        if(getNextToken() == TokenType::scope_close){
+            return Node::Stmt{scope};
+        }
+
+        Log::Error("Un-closed scope, expected `}`");
+        exit(1);
+    }
+
+    if(getNextToken() == TokenType::new_line || getNextToken() == TokenType::scope_close)
+        return {};
+    Log::Error("Unexpected token");
+    exit(1);
+}
+
+/// public
+
+Node::Program *Parser::parse() {
+
+    for(index = 0; index < tokens.size(); index++){
+        auto stmt = parseStmt();
+        if(stmt.has_value())
+            program.prg.emplace_back(stmt.value());
+        else if(getNextToken() == TokenType::scope_close){ // sadly needed for parsing the scopes
+            Log::Error("Unexpected `}`");
             exit(1);
         }
+        else
+            break;
     }
 
     return &program;

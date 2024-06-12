@@ -21,6 +21,7 @@ public:
 private:
 
     Node::Term* parseTerm();
+    std::optional<Node::Stmt> parseStmt();
     bool isBinOp(const TokenType type);
     int getBinPrec(TokenType type);
     Node::Expr* parseIntExpr(const int min_prec);
@@ -28,7 +29,7 @@ private:
     TokenType getNextToken(bool newline = false);
 
     std::vector<Token> tokens;
-    Node::Program program;
     uint64_t index;
+    Node::Program program;
     ArenaAllocator m_allocator;
 };

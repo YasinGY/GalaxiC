@@ -71,6 +71,12 @@ void Storage::CreateScope() {
 }
 size_t Storage::EndScope(){
     size_t ret_value = scopes.at(scopes.size() - 1).size;
+
+    for(uint64_t i = 0; i < scopes.at(scopes.size() - 1).vars; i++) {
+        stack_size -= variables.at(variables.size() - 1).size;
+        variables.pop_back();
+    }
+
     scopes.pop_back();
     return ret_value;
 }
