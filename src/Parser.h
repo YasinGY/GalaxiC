@@ -21,7 +21,7 @@ public:
 private:
 
     Node::Term* parseTerm();
-    std::optional<Node::Stmt> parseStmt();
+    std::optional<Node::Stmt*> parseStmt();
     bool isBinOp(const TokenType type);
     int getBinPrec(TokenType type);
     Node::Expr* parseIntExpr(const int min_prec);

@@ -53,7 +53,7 @@ private:
     void GenExpr(const Node::Expr* expr, const std::string reg);
     void GenBinExpr(const Node::BinExpr* expr);
     bool isExprInit(const Node::Expr* expr);
-    void Generate(const std::vector<Node::Stmt> stmts);
+    void Generate(const std::vector<Node::Stmt*> stmts);
 
     Node::Program* prg;
     std::vector<std::string> prg_links;

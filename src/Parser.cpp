@@ -147,7 +147,7 @@ void Parser::checkIfLastToken(const char *msg) {
     }
 }
 
-std::optional<Node::Stmt> Parser::parseStmt(){
+std::optional<Node::Stmt*> Parser::parseStmt(){
     if(getNextToken() == TokenType::exit){
         checkIfLastToken("Expected an expression after exit token");
         index++;
@@ -163,7 +163,10 @@ std::optional<Node::Stmt> Parser::parseStmt(){
                 if(getNextToken() == TokenType::semi){
                     Node::Exit* e = m_allocator.alloc<Node::Exit>();
                     e->expr = expr;
-                    return Node::Stmt{e};
+
+                    auto stmt = m_allocator.alloc<Node::Stmt>();
+                    stmt->stmt = e;
+                    return stmt;
                 }
             }
         }
@@ -206,7 +209,10 @@ std::optional<Node::Stmt> Parser::parseStmt(){
                 var->type = type;
                 var->expr->var = term;
                 var->ident = ident;
-                return Node::Stmt{var};
+
+                auto stmt = m_allocator.alloc<Node::Stmt>();
+                stmt->stmt = var;
+                return stmt;
             }
             else if(getNextToken() == TokenType::equal){
                 index++;
@@ -218,7 +224,10 @@ std::optional<Node::Stmt> Parser::parseStmt(){
                     var->type = type;
                     var->expr = expr;
                     var->ident = ident;
-                    return Node::Stmt{var};
+
+                    auto stmt = m_allocator.alloc<Node::Stmt>();
+                    stmt->stmt = var;
+                    return stmt;
                 }
                 else{
                     Log::Error("Expected a \';\' after declaring an int variable");
@@ -251,7 +260,10 @@ std::optional<Node::Stmt> Parser::parseStmt(){
                     auto s = m_allocator.alloc<Node::LitString>();
                     s->value = tokens.at(index - 1).value.value();
                     link->value = s;
-                    return Node::Stmt{link};
+
+                    auto stmt = m_allocator.alloc<Node::Stmt>();
+                    stmt->stmt = link;
+                    return stmt;
                 }
                 else{
                     Log::Error("Expected a new line after \'#link\' statement");
@@ -279,11 +291,53 @@ std::optional<Node::Stmt> Parser::parseStmt(){
         }
 
         if(getNextToken() == TokenType::scope_close){
-            return Node::Stmt{scope};
+            auto stmt = m_allocator.alloc<Node::Stmt>();
+            stmt->stmt = scope;
+            return stmt;
         }
 
         Log::Error("Un-closed scope, expected `}`");
         exit(1);
+    }
+
+    else if(getNextToken() == TokenType::_if){
+        checkIfLastToken("Expected `(` after if keyword with an expr");
+        index++;
+
+        if(getNextToken() != TokenType::expr_open){
+            Log::Error("Expected an `(` after if keyword");
+            exit(1);
+        }
+        index++;
+
+        auto _if = m_allocator.alloc<Node::If>();
+        auto expr = parseIntExpr();
+
+        // TODO: check for `==`, `>`, `<` and more!
+
+        if(getNextToken() != TokenType::expr_close){
+            Log::Error("Expected `)` at the end of the if expression");
+            exit(1);
+        }
+        index++;
+
+        auto stmt = parseStmt();
+
+        if(!std::holds_alternative<Node::Scope*>(stmt.value()->stmt)) {
+            auto scope = m_allocator.alloc<Node::Scope>();
+            scope->stmts.emplace_back(stmt.value());
+            _if->stmt = scope;
+        }
+        else{
+            _if->stmt = std::get<Node::Scope*>(stmt.value()->stmt);
+        }
+
+        _if->expr = expr;
+
+        auto ret_stmt = m_allocator.alloc<Node::Stmt>();
+        ret_stmt->stmt = _if;
+
+        return ret_stmt;
     }
 
     if(getNextToken() == TokenType::new_line || getNextToken() == TokenType::scope_close)

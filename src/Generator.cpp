@@ -82,7 +82,7 @@ void Generator::GenExpr(const Node::Expr* expr, const std::string reg) {
         GenBinExpr(std::get<Node::BinExpr*>(expr->var));
 }
 
-void Generator::Generate(const std::vector<Node::Stmt> stmts) {
+void Generator::Generate(const std::vector<Node::Stmt*> stmts) {
 
     struct ProgVisitor {
         Generator& gen;
@@ -154,11 +154,15 @@ void Generator::Generate(const std::vector<Node::Stmt> stmts) {
             if(scope_size > 0)
                 gen.code.text << "add " << gen.bit << "sp, " << scope_size << "\n";
         }
+
+        void operator()(const Node::If* stmt){
+            assert(false && "Not implemented");
+        }
     };
 
-    for(Node::Stmt stmt : stmts) {
+    for(Node::Stmt* stmt : stmts) {
         ProgVisitor visitor(*this);
-        std::visit(visitor, stmt.stmt);
+        std::visit(visitor, stmt->stmt);
     }
 }
 

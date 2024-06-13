@@ -36,6 +36,8 @@ private:
             {"define", TokenType::define},
             {"link", TokenType::link},
             {"void", TokenType::_void},
+            {"if", TokenType::_if},
+            {"else", TokenType::_else},
     };
 
     char token_breakers[22] = {

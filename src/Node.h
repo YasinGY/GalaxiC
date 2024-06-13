@@ -84,14 +84,19 @@ namespace Node{
     struct Stmt;
 
     struct Scope{
-        std::vector<Stmt> stmts;
+        std::vector<Stmt*> stmts;
+    };
+
+    struct If{
+        Expr* expr;
+        Scope* stmt;
     };
 
     struct Stmt{
-        std::variant<Exit*, Link*, Variable*, Scope*> stmt;
+        std::variant<Exit*, Link*, Variable*, Scope*, If*> stmt;
     };
 
     struct Program{
-        std::vector<Stmt> prg;
+        std::vector<Stmt*> prg;
     };
 }
