@@ -4,7 +4,7 @@ void Generator::GenTerm(const Node::Term *term, const std::string reg) {
     if(std::holds_alternative<Node::LitInt*>(term->term)){
         std::string value = std::get<Node::LitInt*>(term->term)->value;
 
-        code.text << "mov " << reg << ", " << value << "\n";
+        code.text << "mov " << reg << ", " << value << '\n';
     }
     else if(std::holds_alternative<Node::Ident*>(term->term)){
         auto ident = std::get<Node::Ident*>(term->term);
@@ -82,7 +82,7 @@ void Generator::GenExpr(const Node::Expr* expr, const std::string reg) {
         GenBinExpr(std::get<Node::BinExpr*>(expr->var));
 }
 
-void Generator::Generate(const std::vector<Node::Stmt*> stmts) {
+void Generator::Generate(const Node::Stmt* stmt) {
 
     struct ProgVisitor {
         Generator& gen;
@@ -149,21 +149,39 @@ void Generator::Generate(const std::vector<Node::Stmt*> stmts) {
 
         void operator()(const Node::Scope* stmt){
             gen.storage.CreateScope();
-            gen.Generate(stmt->stmts);
+
+            for(Node::Stmt* stmts : stmt->stmts)
+                gen.Generate(stmts);
+
             uint64_t scope_size = gen.storage.EndScope();
             if(scope_size > 0)
-                gen.code.text << "add " << gen.bit << "sp, " << scope_size << "\n";
+                gen.code.text << "add " << gen.bit << "sp, " << scope_size << '\n';
         }
 
         void operator()(const Node::If* stmt){
-            assert(false && "Not implemented");
+            // for now check if it is 0 only
+            gen.GenExpr(stmt->expr, "rax");
+            gen.code.text << "cmp rax, 0\n";
+            gen.code.text << "je main" << gen.main_labels << '\n'; // its 0 aka false
+            gen.code.text << "jmp label" << gen.temp_labels << '\n';
+
+            gen.code.text << "label" << gen.temp_labels << ":\n";
+
+            Node::Stmt* send_stmt = new Node::Stmt();
+            send_stmt->stmt = stmt->stmt;
+            gen.Generate(send_stmt); // generates the scope
+            free(send_stmt);
+
+            gen.code.text << "jmp main" << gen.main_labels << '\n';
+
+            gen.code.text << "main" << gen.main_labels << ":\n";
+            gen.temp_labels++;
+            gen.main_labels++;
         }
     };
 
-    for(Node::Stmt* stmt : stmts) {
-        ProgVisitor visitor(*this);
-        std::visit(visitor, stmt->stmt);
-    }
+    ProgVisitor visitor(*this);
+    std::visit(visitor, stmt->stmt);
 }
 
 std::vector<std::string> Generator::GetLinkPrograms() {
