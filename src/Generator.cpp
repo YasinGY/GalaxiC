@@ -160,8 +160,8 @@ void Generator::Generate(const Node::Stmt* stmt) {
 
         void operator()(const Node::If* stmt){
             // for now check if it is 0 only
-            gen.GenExpr(stmt->expr, "rax");
-            gen.code.text << "cmp rax, 0\n";
+            gen.GenExpr(stmt->expr, gen.bit + "ax");
+            gen.code.text << "cmp " << gen.bit << "ax, 0\n";
             gen.code.text << "je main" << gen.main_labels << '\n'; // its 0 aka false
             gen.code.text << "jmp label" << gen.temp_labels << '\n';
 
@@ -177,6 +177,13 @@ void Generator::Generate(const Node::Stmt* stmt) {
             gen.code.text << "main" << gen.main_labels << ":\n";
             gen.temp_labels++;
             gen.main_labels++;
+        }
+
+        void operator()(const Node::Reassign* stmt){
+            gen.GenExpr(stmt->expr, gen.bit + "ax");
+
+            uint64_t pos = gen.storage.GetStackPosition(stmt->ident->value);
+            gen.code.text << "mov [" << gen.bit << "sp + " << pos << "], " << gen.bit << "ax\n";
         }
     };
 

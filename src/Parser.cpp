@@ -340,6 +340,209 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         return ret_stmt;
     }
 
+    else if (getNextToken() == TokenType::ident) {
+        std::string identValue = tokens.at(index).value.value();
+        index++;
+
+        Node::Reassign* stmt = m_allocator.alloc<Node::Reassign>();
+        Node::Ident* ident = m_allocator.alloc<Node::Ident>();
+        ident->value = identValue;
+        stmt->ident = ident;
+
+        TokenType nextToken = getNextToken();
+        switch (nextToken) {
+            case TokenType::plus:
+                index++;
+                if (getNextToken() == TokenType::plus) {
+                    // Parse ident++
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprAdd* binExprAdd = m_allocator.alloc<Node::BinExprAdd>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Expr* rhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    Node::Term* rhsTerm = m_allocator.alloc<Node::Term>();
+                    Node::LitInt* rhsInt = m_allocator.alloc<Node::LitInt>();
+                    rhsInt->value = "1";
+
+                    lhsTerm->term = ident;
+                    rhsTerm->term = rhsInt;
+                    lhs->var = lhsTerm;
+                    rhs->var = rhsTerm;
+                    binExprAdd->lhs = lhs;
+                    binExprAdd->rhs = rhs;
+                    binExpr->expr = binExprAdd;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else if (getNextToken() == TokenType::equal) {
+                    // Parse ident += expr
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprAdd* binExprAdd = m_allocator.alloc<Node::BinExprAdd>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    lhsTerm->term = ident;
+                    lhs->var = lhsTerm;
+                    Node::Expr* rhs = parseIntExpr();
+                    binExprAdd->lhs = lhs;
+                    binExprAdd->rhs = rhs;
+                    binExpr->expr = binExprAdd;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else {
+                    Log::Error("Unexpected token after `+`");
+                    exit(1);
+                }
+                break;
+
+            case TokenType::minus:
+                index++;
+                if (getNextToken() == TokenType::minus) {
+                    // Parse ident--
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprSub* binExprSub = m_allocator.alloc<Node::BinExprSub>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Expr* rhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    Node::Term* rhsTerm = m_allocator.alloc<Node::Term>();
+                    Node::LitInt* rhsInt = m_allocator.alloc<Node::LitInt>();
+                    rhsInt->value = "1";
+
+                    lhsTerm->term = ident;
+                    rhsTerm->term = rhsInt;
+                    lhs->var = lhsTerm;
+                    rhs->var = rhsTerm;
+                    binExprSub->lhs = lhs;
+                    binExprSub->rhs = rhs;
+                    binExpr->expr = binExprSub;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else if (getNextToken() == TokenType::equal) {
+                    // Parse ident -= expr
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprSub* binExprSub = m_allocator.alloc<Node::BinExprSub>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    lhsTerm->term = ident;
+                    lhs->var = lhsTerm;
+                    Node::Expr* rhs = parseIntExpr();
+                    binExprSub->lhs = lhs;
+                    binExprSub->rhs = rhs;
+                    binExpr->expr = binExprSub;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else {
+                    Log::Error("Unexpected token after `-`");
+                    exit(1);
+                }
+                break;
+
+            case TokenType::star:
+                index++;
+                if (getNextToken() == TokenType::equal) {
+                    // Parse ident *= expr
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprMul* binExprMul = m_allocator.alloc<Node::BinExprMul>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    lhsTerm->term = ident;
+                    lhs->var = lhsTerm;
+                    Node::Expr* rhs = parseIntExpr();
+                    binExprMul->lhs = lhs;
+                    binExprMul->rhs = rhs;
+                    binExpr->expr = binExprMul;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else {
+                    Log::Error("Unexpected token after `*`");
+                    exit(1);
+                }
+                break;
+
+            case TokenType::slash:
+                index++;
+                if (getNextToken() == TokenType::equal) {
+                    // Parse ident /= expr
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprDiv* binExprDiv = m_allocator.alloc<Node::BinExprDiv>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    lhsTerm->term = ident;
+                    lhs->var = lhsTerm;
+                    Node::Expr* rhs = parseIntExpr();
+                    binExprDiv->lhs = lhs;
+                    binExprDiv->rhs = rhs;
+                    binExpr->expr = binExprDiv;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else {
+                    Log::Error("Unexpected token after `/`");
+                    exit(1);
+                }
+                break;
+
+            case TokenType::percent:
+                index++;
+                if (getNextToken() == TokenType::equal) {
+                    // Parse ident %= expr
+                    index++;
+                    Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
+                    Node::BinExprMod* binExprMod = m_allocator.alloc<Node::BinExprMod>();
+                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
+                    lhsTerm->term = ident;
+                    lhs->var = lhsTerm;
+                    Node::Expr* rhs = parseIntExpr();
+                    binExprMod->lhs = lhs;
+                    binExprMod->rhs = rhs;
+                    binExpr->expr = binExprMod;
+
+                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    expr->var = binExpr;
+                    stmt->expr = expr;
+                } else {
+                    Log::Error("Unexpected token after `%`");
+                    exit(1);
+                }
+                break;
+
+            case TokenType::equal:
+                // Parse ident = expr
+                index++;
+                stmt->expr = parseIntExpr();
+                break;
+
+            default:
+                Log::Error("Unexpected token after ident");
+                exit(1);
+        }
+
+        if (getNextToken() != TokenType::semi) {
+            Log::Error("Expected a `;`");
+            exit(1);
+        }
+
+        Node::Stmt* returnStmt = m_allocator.alloc<Node::Stmt>();
+        returnStmt->stmt = stmt;
+        return returnStmt;
+    }
+
     if(getNextToken() == TokenType::new_line || getNextToken() == TokenType::scope_close)
         return {};
     Log::Error("Unexpected token");

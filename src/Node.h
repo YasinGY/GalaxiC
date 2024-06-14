@@ -67,6 +67,11 @@ namespace Node{
         std::variant<Term*, BinExpr*> var;
     };
 
+    struct Reassign{
+        Ident* ident;
+        Expr* expr;
+    };
+
     struct Exit{
         Expr* expr;
     };
@@ -93,7 +98,7 @@ namespace Node{
     };
 
     struct Stmt{
-        std::variant<Exit*, Link*, Variable*, Scope*, If*> stmt;
+        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*> stmt;
     };
 
     struct Program{

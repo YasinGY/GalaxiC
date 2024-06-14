@@ -34,8 +34,8 @@ std::vector<Token> Tokenizer::tokenize() {
                 else{
                     tokens.emplace_back(Token{TokenType::ident, buffer});
                 }
+                buffer.clear();
             }
-            buffer.clear();
 
             switch(c){
                 case '\n':
@@ -61,7 +61,30 @@ std::vector<Token> Tokenizer::tokenize() {
                     tokens.emplace_back(Token{TokenType::plus});
                     break;
                 case '-':
-                    tokens.emplace_back(Token{TokenType::minus});
+                    if(isdigit(code.at(i + 1)) && !isdigit(code.at(i - 1))){
+                        // check for negative literal ints
+                        uint64_t position = i;
+                        position++;
+                        std::string buff = "";
+                        while(true){
+                            if(isCharTokenBreaker(code.at(position))){
+                                if(isStringInteger(buff)){
+                                    tokens.emplace_back(Token{TokenType::lit_int, '-' + buff});
+                                    i = position - 1;
+                                    break;
+                                }
+                                else{
+                                    tokens.emplace_back(Token{TokenType::minus});
+                                    break;
+                                }
+                            }
+                            buff += code.at(position);
+                            position++;
+                        }
+                    }
+                    else {
+                        tokens.emplace_back(Token{TokenType::minus});
+                    }
                     break;
                 case '*':
                     tokens.emplace_back(Token{TokenType::star});
