@@ -61,7 +61,7 @@ std::vector<Token> Tokenizer::tokenize() {
                     tokens.emplace_back(Token{TokenType::plus});
                     break;
                 case '-':
-                    if(isdigit(code.at(i + 1)) && !isdigit(code.at(i - 1))){
+                    if(isdigit(code.at(i + 1)) && !isTokenInt(tokens.end()->type)){
                         // check for negative literal ints
                         uint64_t position = i;
                         position++;
@@ -143,4 +143,15 @@ bool Tokenizer::isStringInteger(const std::string &str) {
             return false;
 
     return true;
+}
+
+bool Tokenizer::isTokenInt(TokenType type) {
+    // will add more when doubles and floats get added
+    switch(type){
+        case TokenType::lit_int:
+        case TokenType::ident:
+            return true;
+        default:
+            return false;
+    }
 }

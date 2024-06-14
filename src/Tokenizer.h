@@ -20,6 +20,7 @@ private:
     bool isCharTokenBreaker(const char& c);
     inline bool isInTokenDict(const std::string& str){ return TokenDict.find(str) != TokenDict.end(); }
     bool isStringInteger(const std::string& str);
+    bool isTokenInt(TokenType type);
 
     std::unordered_map<std::string, TokenType> TokenDict = {
             {"exit", TokenType::exit},
