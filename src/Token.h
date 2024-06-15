@@ -10,11 +10,13 @@ enum class TokenType{
     // literal values like 1432 or "string value"
     lit_int, lit_string,
     // single char tokens
-    semi, expr_open, expr_close, coma, colon, dot, _and, _not, qmark, stream,
+    semi, expr_open, expr_close, coma, colon, dot, _and, _not, qmark, less_then, greater_then,
     percent, hash, plus, minus, star, slash, equal, scope_open, scope_close,
     new_line,
     // others
     _import, define, link,
+    // for directly putting assembly in the file
+    _asm_text, _asm_data, _asm_bss, _extern,
     // is for identifiers
     // is checked during parsing and generation
     ident,

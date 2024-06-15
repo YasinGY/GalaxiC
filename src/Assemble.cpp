@@ -17,13 +17,18 @@ void Assemble::AssembleFile() {
 void Assemble::LinkFile() {
 
     std::string command;
-    command = "ld " + output_path.substr(0, output_path.length() - 4) + ".o " +"-o " + output_path;
+    command = "gcc " + output_path.substr(0, output_path.length() - 4) + ".o -o " + output_path;
     for(std::string str : links)
         command += " -l" + str;
+
     system(command.c_str());
 }
 
 void Assemble::Clean() {
     system(std::string("del " + output_path.substr(0, output_path.length() - 4) + ".o")
     .c_str());
+}
+
+void Assemble::Run(){
+    system(std::string(output_path).c_str());
 }

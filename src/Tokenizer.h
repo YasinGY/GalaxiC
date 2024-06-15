@@ -12,7 +12,9 @@
 
 class Tokenizer{
 public:
-    explicit Tokenizer(std::string  content) : code(std::move(content)) {}
+    inline explicit Tokenizer(std::string  content) : code(std::move(content)) {
+        removeComments();
+    }
     std::vector<Token> tokenize();
 
 private:
@@ -21,6 +23,7 @@ private:
     inline bool isInTokenDict(const std::string& str){ return TokenDict.find(str) != TokenDict.end(); }
     bool isStringInteger(const std::string& str);
     bool isTokenInt(TokenType type);
+    void removeComments();
 
     std::unordered_map<std::string, TokenType> TokenDict = {
             {"exit", TokenType::exit},
@@ -39,11 +42,16 @@ private:
             {"void", TokenType::_void},
             {"if", TokenType::_if},
             {"else", TokenType::_else},
+            {"_asm_text", TokenType::_asm_text},
+            {"_asm_data", TokenType::_asm_data},
+            {"_asm_bss", TokenType::_asm_bss},
+            {"extern", TokenType::_extern},
     };
 
-    char token_breakers[22] = {
-            ' ', ';', '\n', '(', ')', '{', '}', '-', '*', '+', '=', '/', '#',
-            '!', '%', '&', ':', '?', '.', ',', '\"', '\0'
+    char token_breakers[24] = {
+            ' ', ';', '\n', '(', ')', '{', '}', '-', '*', '+', '=',
+            '/', '#','!', '%', '&', ':', '?', '.', ',', '\"',
+            '<', '>', '\0'
     };
 
     std::string code;

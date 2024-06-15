@@ -17,6 +17,7 @@ public:
         AssembleFile();
         LinkFile();
         Clean();
+        Run();
     }
 
 private:
@@ -25,6 +26,7 @@ private:
     void AssembleFile();
     void LinkFile();
     void Clean();
+    void Run();
 
     const std::vector<std::string> links;
     const std::string content;

@@ -275,8 +275,34 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                 exit(1);
             }
         }
+        else if(getNextToken() == TokenType::_extern){
+            index++;
+            checkIfLastToken("Expected an identifier name to import externally");
+            if(getNextToken() != TokenType::ident){
+                Log::Error("Expected an identifier name to import externally");
+                exit(1);
+            }
+
+            auto string = m_allocator.alloc<Node::LitString>();
+            string->value = tokens.at(index).value.value();
+
+            index++;
+            if(getNextToken(true) != TokenType::new_line){
+                Log::Error("Expected a new line after #extern command but got an unexpected token");
+                exit(1);
+            }
+
+            auto assembly = m_allocator.alloc<Node::Assembly>();
+            assembly->code = string;
+            assembly->section = Node::Asm_Section::external;
+
+            auto stmt = m_allocator.alloc<Node::Stmt>();
+            stmt->stmt = assembly;
+
+            return stmt;
+        }
         else{
-            // TODO - hash commands
+            Log::Info("hash command not implemented");
         }
     }
 
@@ -541,6 +567,58 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         Node::Stmt* returnStmt = m_allocator.alloc<Node::Stmt>();
         returnStmt->stmt = stmt;
         return returnStmt;
+    }
+
+    /// has instructions for modifying assembly directly from the program
+    /// ASM .text, .data, .bss and external functions
+    else if(getNextToken() == TokenType::_asm_text || getNextToken() == TokenType::_asm_data || getNextToken() == TokenType::_asm_bss){
+        Node::Asm_Section section;
+
+        switch(getNextToken()){
+            case TokenType::_asm_text:
+                section = Node::Asm_Section::text;
+                break;
+            case TokenType::_asm_data:
+                section = Node::Asm_Section::data;
+                break;
+            case TokenType::_asm_bss:
+                section = Node::Asm_Section::bss;
+                break;
+            default:
+                exit(1); // unreachable, used for disabling warning messages
+        }
+
+        index++;
+        checkIfLastToken("Expected a `<` to stream into the output assembly but reached the last token");
+        if(getNextToken() != TokenType::less_then){
+            Log::Error("Expected a `<` to stream into the output assembly");
+            exit(1);
+        }
+
+        index++;
+        checkIfLastToken("Expected a string value to stream into the output assembly but reached the last token");
+        if(getNextToken() != TokenType::lit_string){
+            Log::Error("Expected a string value to stream into the output assembly");
+            exit(1);
+        }
+
+        auto code = m_allocator.alloc<Node::LitString>();
+        code->value = tokens.at(index).value.value();
+
+        index++;
+        if(getNextToken() != TokenType::semi){
+            Log::Error("Expected a `;` after the assembly statement");
+            exit(1);
+        }
+
+        auto assembly = m_allocator.alloc<Node::Assembly>();
+        assembly->section = section;
+        assembly->code = code;
+
+        auto stmt = m_allocator.alloc<Node::Stmt>();
+        stmt->stmt = assembly;
+
+        return stmt;
     }
 
     if(getNextToken() == TokenType::new_line || getNextToken() == TokenType::scope_close)

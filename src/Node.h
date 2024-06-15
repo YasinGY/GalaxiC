@@ -97,8 +97,17 @@ namespace Node{
         Scope* stmt;
     };
 
+    enum class Asm_Section{
+        text, data, bss, external
+    };
+
+    struct Assembly{
+        LitString* code;
+        Asm_Section section;
+    };
+
     struct Stmt{
-        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*> stmt;
+        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*, Assembly*> stmt;
     };
 
     struct Program{

@@ -100,6 +100,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
                     gen.code.text << "ret\n";
                     break;
                 case PLATFORM_LINUX32:
+                case PLATFORM_LINUX64:
                     gen.code.text << "mov " << gen.bit << "di, " << gen.bit << "ax\n";
                     gen.code.text << "mov " <<  gen.bit << "ax, 60\n";
                     gen.code.text << "syscall\n";
@@ -185,6 +186,23 @@ void Generator::Generate(const Node::Stmt* stmt) {
             uint64_t pos = gen.storage.GetStackPosition(stmt->ident->value);
             gen.code.text << "mov [" << gen.bit << "sp + " << pos << "], " << gen.bit << "ax\n";
         }
+
+        void operator()(const Node::Assembly* stmt){
+            switch(stmt->section){
+                case Node::Asm_Section::external:
+                    gen.code.external << "extern " << stmt->code->value << '\n';
+                    break;
+                case Node::Asm_Section::text:
+                    gen.code.text << stmt->code->value << '\n';
+                    break;
+                case Node::Asm_Section::data:
+                    gen.code.data << stmt->code->value << '\n';
+                    break;
+                case Node::Asm_Section::bss:
+                    gen.code.bbs << stmt->code->value << '\n';
+                    break;
+            }
+        }
     };
 
     ProgVisitor visitor(*this);
@@ -192,7 +210,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
 }
 
 std::vector<std::string> Generator::GetLinkPrograms() {
-    return std::vector<std::string>();
+    return prg_links;
 }
 
 bool Generator::isExprInit(const Node::Expr *expr) {

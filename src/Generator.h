@@ -2,8 +2,6 @@
 
 #include <string>
 #include <sstream>
-#include <memory>
-#include <cassert>
 
 #include "Core.h"
 #include "Node.h"
@@ -38,7 +36,7 @@ public:
 
     std::vector<std::string> GetLinkPrograms();
     inline std::string GenerateCode() {
-        return code.bbs.str() + code.data.str() + code.external.str() + code.text.str();
+        return code.external.str() + code.data.str() + code.bbs.str() + code.text.str();
     };
 
 private:

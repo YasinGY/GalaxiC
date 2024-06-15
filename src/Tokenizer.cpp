@@ -120,7 +120,11 @@ std::vector<Token> Tokenizer::tokenize() {
                     tokens.emplace_back(Token{TokenType::coma});
                     break;
                 case '<':
-                    tokens.emplace_back(Token{TokenType::stream});
+                    tokens.emplace_back(Token{TokenType::less_then});
+                    break;
+                case '>':
+                    tokens.emplace_back(Token{TokenType::greater_then});
+                    break;
             }
         }
         else{
@@ -154,4 +158,49 @@ bool Tokenizer::isTokenInt(TokenType type) {
         default:
             return false;
     }
+}
+
+void Tokenizer::removeComments() {
+    std::string result;
+    bool inMultilineComment = false;
+    bool inSingleQuote = false;
+    bool inDoubleQuote = false;
+
+    for (uint64_t i = 0; i < code.length(); ++i) {
+        if (!inMultilineComment && !inSingleQuote && !inDoubleQuote && code[i] == '/') {
+            if (i + 1 < code.length() && code[i + 1] == '/') {
+                // Single-line comment
+                i += 2;
+                while (i < code.length() && code[i] != '\n') {
+                    ++i;
+                }
+                result += '\n'; // Add the newline character after the single-line comment
+            } else if (i + 1 < code.length() && code[i + 1] == '*') {
+                // Multi-line comment start
+                inMultilineComment = true;
+                i += 2;
+            } else {
+                result += code[i];
+            }
+        } else if (inMultilineComment && code[i] == '*' && i + 1 < code.length() && code[i + 1] == '/') {
+            // Multi-line comment end
+            inMultilineComment = false;
+            i += 2;
+        } else if (!inMultilineComment && code[i] == '\'') {
+            // Single quote
+            inSingleQuote = !inSingleQuote;
+            result += code[i];
+        } else if (!inMultilineComment && code[i] == '"') {
+            // Double quote
+            inDoubleQuote = !inDoubleQuote;
+            result += code[i];
+        } else if (!inMultilineComment && !inSingleQuote && !inDoubleQuote) {
+            result += code[i];
+        } else {
+            // Inside a multi-line comment, single quote, or double quote, keep the characters
+            result += code[i];
+        }
+    }
+
+    code = result;
 }
