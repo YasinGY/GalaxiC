@@ -97,6 +97,15 @@ namespace Node{
         Scope* stmt;
     };
 
+    struct Elif{
+        Expr* expr;
+        Scope* stmt;
+    };
+
+    struct Else{
+        Scope* stmt;
+    };
+
     enum class Asm_Section{
         text, data, bss, external
     };
@@ -107,7 +116,7 @@ namespace Node{
     };
 
     struct Stmt{
-        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*, Assembly*> stmt;
+        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*, Assembly*, Elif*, Else*> stmt;
     };
 
     struct Program{

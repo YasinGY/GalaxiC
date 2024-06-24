@@ -148,6 +148,13 @@ void Generator::Generate(const Node::Stmt* stmt) {
             }
         }
 
+        void operator()(const Node::Reassign* stmt){
+            gen.GenExpr(stmt->expr, gen.bit + "ax");
+
+            uint64_t pos = gen.storage.GetStackPosition(stmt->ident->value);
+            gen.code.text << "mov [" << gen.bit << "sp + " << pos << "], " << gen.bit << "ax\n";
+        }
+
         void operator()(const Node::Scope* stmt){
             gen.storage.CreateScope();
 
@@ -157,34 +164,6 @@ void Generator::Generate(const Node::Stmt* stmt) {
             uint64_t scope_size = gen.storage.EndScope();
             if(scope_size > 0)
                 gen.code.text << "add " << gen.bit << "sp, " << scope_size << '\n';
-        }
-
-        void operator()(const Node::If* stmt){
-            // for now check if it is 0 only
-            gen.GenExpr(stmt->expr, gen.bit + "ax");
-            gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-            gen.code.text << "je main" << gen.main_labels << '\n'; // its 0 aka false
-            gen.code.text << "jmp label" << gen.temp_labels << '\n';
-
-            gen.code.text << "label" << gen.temp_labels << ":\n";
-
-            Node::Stmt* send_stmt = new Node::Stmt();
-            send_stmt->stmt = stmt->stmt;
-            gen.Generate(send_stmt); // generates the scope
-            free(send_stmt);
-
-            gen.code.text << "jmp main" << gen.main_labels << '\n';
-
-            gen.code.text << "main" << gen.main_labels << ":\n";
-            gen.temp_labels++;
-            gen.main_labels++;
-        }
-
-        void operator()(const Node::Reassign* stmt){
-            gen.GenExpr(stmt->expr, gen.bit + "ax");
-
-            uint64_t pos = gen.storage.GetStackPosition(stmt->ident->value);
-            gen.code.text << "mov [" << gen.bit << "sp + " << pos << "], " << gen.bit << "ax\n";
         }
 
         void operator()(const Node::Assembly* stmt){
@@ -202,6 +181,116 @@ void Generator::Generate(const Node::Stmt* stmt) {
                     gen.code.bbs << stmt->code->value << '\n';
                     break;
             }
+        }
+
+        void operator()(const Node::If* stmt) {
+            if (gen.isNextNodeIfChain()) {
+                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.code.text << "cmp " << gen.bit << "ax, 0\n";
+                gen.code.text << "je temp" << gen.temp_labels << '\n';    // if false
+                gen.code.text << "jmp label" << gen.label_labels << '\n'; // if true
+                gen.code.text << "label" << gen.label_labels << ":\n";
+                gen.label_labels++;
+                uint64_t temp_label_amount = gen.temp_labels;
+                gen.temp_labels++;
+
+                Node::Stmt* send_stmt = new Node::Stmt();
+                send_stmt->stmt = stmt->stmt;
+                gen.Generate(send_stmt); // generates the scope
+                free(send_stmt);
+
+                gen.code.text << "temp" << temp_label_amount << ":\n";
+                gen.temp_labels++;
+
+                gen.index++;
+                gen.Generate(gen.prg->prg.at(gen.index));
+
+                gen.code.text << "main" << gen.main_labels << ":\n";
+                gen.main_labels++;
+            }
+            else{
+                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.code.text << "cmp " << gen.bit << "ax, 0\n";
+                gen.code.text << "je main" << gen.main_labels << '\n'; // its 0/false
+                gen.code.text << "jmp label" << gen.label_labels << '\n';
+
+                gen.code.text << "label" << gen.label_labels << ":\n";
+
+                Node::Stmt* send_stmt = new Node::Stmt();
+                send_stmt->stmt = stmt->stmt;
+                gen.Generate(send_stmt); // generates the scope
+                free(send_stmt);
+
+                gen.code.text << "jmp main" << gen.main_labels << '\n';
+
+                gen.code.text << "main" << gen.main_labels << ":\n";
+                gen.label_labels++;
+                gen.main_labels++;
+            }
+        }
+
+        void operator()(const Node::Elif* stmt) {
+            if (!std::holds_alternative<Node::If*>(gen.prg->prg.at(gen.index - 1)->stmt) &&
+                !std::holds_alternative<Node::Elif*>(gen.prg->prg.at(gen.index - 1)->stmt)) {
+                Log::Error("An if statement is required before an else if condition statement");
+                exit(1);
+            }
+
+            if (gen.isNextNodeIfChain()) {
+                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.code.text << "cmp " << gen.bit << "ax, 0\n";
+                gen.code.text << "je temp" << gen.temp_labels << '\n';    // if false
+                gen.code.text << "jmp label" << gen.label_labels << '\n'; // if true
+                gen.code.text << "label" << gen.label_labels << ":\n";
+                gen.label_labels++;
+                uint64_t temp_label_amount = gen.temp_labels;
+                gen.temp_labels++;
+
+                Node::Stmt* send_stmt = new Node::Stmt();
+                send_stmt->stmt = stmt->stmt;
+                gen.Generate(send_stmt); // generates the scope
+                free(send_stmt);
+
+                gen.code.text << "temp" << temp_label_amount << ":\n";
+                gen.temp_labels++;
+
+                gen.index++;
+                gen.Generate(gen.prg->prg.at(gen.index));
+            }
+            else{
+                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.code.text << "cmp " << gen.bit << "ax, 0\n";
+                gen.code.text << "je main" << gen.main_labels << '\n'; // its 0/false
+                gen.code.text << "jmp label" << gen.label_labels << '\n';
+
+                gen.code.text << "label" << gen.label_labels << ":\n";
+                gen.label_labels++;
+
+                Node::Stmt* send_stmt = new Node::Stmt();
+                send_stmt->stmt = stmt->stmt;
+                gen.Generate(send_stmt); // generates the scope
+                free(send_stmt);
+            }
+        }
+
+        void operator()(const Node::Else* stmt){
+            if(!std::holds_alternative<Node::If*>(gen.prg->prg.at(gen.index - 1)->stmt) &&
+               !std::holds_alternative<Node::Elif*>(gen.prg->prg.at(gen.index - 1)->stmt)){
+                Log::Error("An if statement is required before an else condition statement");
+                exit(1);
+            }
+
+            gen.code.text << "jmp label" << gen.label_labels << '\n';
+
+            gen.code.text << "label" << gen.label_labels << ":\n";
+            gen.label_labels++;
+
+            Node::Stmt* send_stmt = new Node::Stmt();
+            send_stmt->stmt = stmt->stmt;
+            gen.Generate(send_stmt); // generates the scope
+            free(send_stmt);
+
+            gen.code.text << "jmp main" << gen.main_labels << '\n';
         }
     };
 

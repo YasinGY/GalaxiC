@@ -74,7 +74,7 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
         if (index >= tokens.size() || !isBinOp(getNextToken()))
             break;
 
-        checkIfLastToken("Expected a binary operator!");
+        checkIfLastToken("Expected a binary operator");
 
         TokenType op = getNextToken();
         int prec = getBinPrec(op);
@@ -117,7 +117,7 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
             modulo->rhs = expr_rhs;
             expr->expr = modulo;
         } else {
-            Log::Error("Failed to parse the int expression!");
+            Log::Error("Failed to parse the int expression");
             exit(1);
         }
 
@@ -148,6 +148,7 @@ void Parser::checkIfLastToken(const char *msg) {
 }
 
 std::optional<Node::Stmt*> Parser::parseStmt(){
+    /// EXIT
     if(getNextToken() == TokenType::exit){
         checkIfLastToken("Expected an expression after exit token");
         index++;
@@ -158,7 +159,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
 
             Node::Expr* expr = parseIntExpr();
             if(getNextToken() == TokenType::expr_close){
-                checkIfLastToken("Expected \';\' after exit statement");
+                checkIfLastToken("Expected `;` after exit statement");
                 index++;
                 if(getNextToken() == TokenType::semi){
                     Node::Exit* e = m_allocator.alloc<Node::Exit>();
@@ -168,10 +169,23 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     stmt->stmt = e;
                     return stmt;
                 }
+                else{
+                    Log::Error("Expected a `;` at the end of the exit statement");
+                    exit(1);
+                }
             }
+            else{
+                Log::Error("Expected a `)` after the expression of the exit statement");
+                exit(1);
+            }
+        }
+        else{
+            Log::Error("Expected a `(` to call function exit");
+            exit(1);
         }
     }
 
+    /// CREATING INT VARIABLES
     else if(getNextToken() == TokenType::_int16 || getNextToken() == TokenType::_int32 ||
             getNextToken() == TokenType::_int64){
 
@@ -190,13 +204,13 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                 exit(1); // unreachable
         }
         index++;
-        checkIfLastToken("Expected an identifier after the \'int\' keyword for variable declaration");
+        checkIfLastToken("Expected an identifier after the `int` keyword for variable declaration");
 
         if(getNextToken() == TokenType::ident){
             Node::Ident* ident = m_allocator.alloc<Node::Ident>();
             ident->value = tokens.at(index).value.value();
             index++;
-            checkIfLastToken("Expected a \';\' or initialization of the ident");
+            checkIfLastToken("Expected a `;` or initialization of the ident");
 
             if(getNextToken() == TokenType::semi){
                 index++;
@@ -216,7 +230,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             }
             else if(getNextToken() == TokenType::equal){
                 index++;
-                checkIfLastToken(std::string("Expected an int value to give to identifier \'" + ident->value + "\'").c_str());
+                checkIfLastToken(std::string("Expected an int value to give to identifier `" + ident->value + "`").c_str());
 
                 auto expr = parseIntExpr();
                 if(getNextToken() == TokenType::semi){
@@ -230,12 +244,12 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     return stmt;
                 }
                 else{
-                    Log::Error("Expected a \';\' after declaring an int variable");
+                    Log::Error("Expected a `;` after declaring an int variable");
                     exit(1);
                 }
             }
             else{
-                Log::Error("Expected a \'=\' or \';\' after giving the name of the identifier to finish the statement");
+                Log::Error("Expected a `=` or `;` after giving the name of the identifier to finish the statement");
                 exit(1);
             }
         }
@@ -245,9 +259,10 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         }
     }
 
+    /// HASH COMMANDS
     else if(getNextToken() == TokenType::hash){
         index++;
-        checkIfLastToken("Expected an action name after the \'#\'");
+        checkIfLastToken("Expected an action name after the `#`");
 
         if(getNextToken() == TokenType::link){
             index++;
@@ -266,7 +281,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     return stmt;
                 }
                 else{
-                    Log::Error("Expected a new line after \'#link\' statement");
+                    Log::Error("Expected a new line after `#link` statement");
                     exit(1);
                 }
             }
@@ -306,6 +321,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         }
     }
 
+    /// SCOPES
     else if(getNextToken() == TokenType::scope_open){
         checkIfLastToken("Un-closed scope, expected `}`");
 
@@ -326,6 +342,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         exit(1);
     }
 
+    /// IF
     else if(getNextToken() == TokenType::_if){
         checkIfLastToken("Expected `(` after if keyword with an expr");
         index++;
@@ -342,7 +359,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         // TODO: check for `==`, `>`, `<` and more!
 
         if(getNextToken() != TokenType::expr_close){
-            Log::Error("Expected `)` at the end of the if expression");
+            Log::Error("Expected `)` at the end of the if condition");
             exit(1);
         }
         index++;
@@ -366,9 +383,74 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         return ret_stmt;
     }
 
+    /// ELSE AND ELSE IF
+    else if(getNextToken() == TokenType::_else){
+        index++;
+        checkIfLastToken("Expected a statement after keyword else");
+
+        /// Else if
+        if(getNextToken() == TokenType::_if){
+            index++;
+            checkIfLastToken("Expected a condition after the else if statement");
+
+            if(getNextToken() != TokenType::expr_open){
+                Log::Error("Expected an `(` after else if");
+                exit(1);
+            }
+            index++;
+            checkIfLastToken("Expected a condition to check after `else if(`");
+
+            auto expr = parseIntExpr();
+
+            // TODO: check for `==`, `>`, `<` and more!
+
+            if(getNextToken() != TokenType::expr_close){
+                Log::Error("Expected `)` at the end of the else if condition");
+                exit(1);
+            }
+            index++;
+            checkIfLastToken("Expected a statement to execute after the else if condition");
+
+
+            auto stmt = parseStmt(); // guaranteed a value
+            auto scope = m_allocator.alloc<Node::Scope>();
+
+            if(!std::holds_alternative<Node::Scope*>(stmt.value()->stmt))
+                scope->stmts.emplace_back(stmt.value());
+            else
+                scope = std::get<Node::Scope*>(stmt.value()->stmt);
+
+            auto else_stmt = m_allocator.alloc<Node::Elif>();
+            else_stmt->stmt = scope;
+            else_stmt->expr = expr;
+
+            auto return_stmt = new Node::Stmt();
+            return_stmt->stmt = else_stmt;
+            return return_stmt;
+        }
+
+        /// Else
+        auto stmt = parseStmt(); // guaranteed a value
+        auto scope = m_allocator.alloc<Node::Scope>();
+
+        if(!std::holds_alternative<Node::Scope*>(stmt.value()->stmt))
+            scope->stmts.emplace_back(stmt.value());
+        else
+            scope = std::get<Node::Scope*>(stmt.value()->stmt);
+
+        auto else_stmt = m_allocator.alloc<Node::Else>();
+        else_stmt->stmt = scope;
+
+        auto return_stmt = new Node::Stmt();
+        return_stmt->stmt = else_stmt;
+        return return_stmt;
+    }
+
+    /// REASSIGNMENT
     else if (getNextToken() == TokenType::ident) {
         std::string identValue = tokens.at(index).value.value();
         index++;
+        checkIfLastToken(("Expected something after identifier" + identValue).c_str());
 
         Node::Reassign* stmt = m_allocator.alloc<Node::Reassign>();
         Node::Ident* ident = m_allocator.alloc<Node::Ident>();
@@ -569,6 +651,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         return returnStmt;
     }
 
+    /// ASSEMBLY INSIDE THE PROGRAM
     /// has instructions for modifying assembly directly from the program
     /// ASM .text, .data, .bss and external functions
     else if(getNextToken() == TokenType::_asm_text || getNextToken() == TokenType::_asm_data || getNextToken() == TokenType::_asm_bss){
@@ -621,6 +704,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         return stmt;
     }
 
+    /// END OF TOKENS OR END OF SCOPE
     if(getNextToken() == TokenType::new_line || getNextToken() == TokenType::scope_close)
         return {};
     Log::Error("Unexpected token");
@@ -633,9 +717,10 @@ Node::Program *Parser::parse() {
 
     for(index = 0; index < tokens.size(); index++){
         auto stmt = parseStmt();
-        if(stmt.has_value())
+        if(stmt.has_value()) {
             program.prg.emplace_back(stmt.value());
-        else if(getNextToken() == TokenType::scope_close){ // sadly needed for parsing the scopes
+        }
+        else if(getNextToken() == TokenType::scope_close){ // needed for parsing the scopes
             Log::Error("Unexpected `}`");
             exit(1);
         }

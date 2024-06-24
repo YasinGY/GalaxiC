@@ -1,13 +1,19 @@
-#link "msvcrt"
-#extern printf
+int test = 1;
 
-int test = 0;
-if (7){
-    _asm_data < "message db 'this is a message from the GalaxiC compiler! ', 3, 10, 0";
-
-    _asm_text < "mov rcx, message";
-    _asm_text < "sub rsp, 28h";
-    _asm_text < "call printf";
-    _asm_text < "add rsp, 28h";
+if(0){
+    test++;
 }
+else if(0){
+    test++;
+}
+else if(0){
+    test++;
+}
+else{
+    if(0)
+        test++;
+    else if(4)
+        test = 100;
+}
+
 exit(test);
