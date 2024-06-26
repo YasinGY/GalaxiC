@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <sstream>
 
 #include "Core.h"
 #include "Log.h"
@@ -26,6 +27,7 @@ private:
     int getBinPrec(TokenType type);
     Node::Expr* parseIntExpr(const int min_prec);
     void checkIfLastToken(const char* msg);
+    std::string getNextTokenPos();
     TokenType getNextToken(bool newline = false);
 
     std::vector<Token> tokens;

@@ -3,7 +3,7 @@
 Node::Term* Parser::parseTerm()  {
     if(getNextToken() != TokenType::ident && getNextToken() != TokenType::lit_int &&
     getNextToken() != TokenType::expr_open){
-        Log::Error("Expected a term (identifier or integer literal)");
+        Log::Error("Expected a term (identifier or integer literal) at " + getNextTokenPos());
         exit(1);
     }
     Node::Term* term = m_allocator.alloc<Node::Term>();
@@ -22,7 +22,7 @@ Node::Term* Parser::parseTerm()  {
         index++;
         auto expr = parseIntExpr(0);
         if(getNextToken() != TokenType::expr_close){
-            Log::Error("Expected an `)`");
+            Log::Error("Expected an `)` at" + getNextTokenPos());
             exit(1);
         }
         auto paren = m_allocator.alloc<Node::TermParen>();
@@ -30,7 +30,7 @@ Node::Term* Parser::parseTerm()  {
         term->term = paren;
     }
     else{
-        Log::Error("Expected an int expression");
+        Log::Error("Expected an int expression at " + getNextTokenPos());
         exit(1);
     }
 
@@ -117,7 +117,7 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
             modulo->rhs = expr_rhs;
             expr->expr = modulo;
         } else {
-            Log::Error("Failed to parse the int expression");
+            Log::Error("Failed to parse the int expression at " + getNextTokenPos());
             exit(1);
         }
 
@@ -141,26 +141,35 @@ TokenType Parser::getNextToken(const bool newline) {
     return tokens.at(index).type;
 }
 
+std::string Parser::getNextTokenPos() {
+    std::stringstream str;
+    str << tokens.at(index).line << ':' << tokens.at(index).col;
+    return str.str();
+}
+
 void Parser::checkIfLastToken(const char *msg) {
     if(index >= tokens.size()){
-        Log::Error(msg);
+        std::stringstream str;
+        str << msg << " at " << tokens.at(index - 1).line << ':' << tokens.at(index - 1).col;
+        Log::Error(str.str());
+        exit(1);
     }
 }
 
 std::optional<Node::Stmt*> Parser::parseStmt(){
     /// EXIT
     if(getNextToken() == TokenType::exit){
-        checkIfLastToken("Expected an expression after exit token");
         index++;
+        checkIfLastToken("Expected an expression after exit token");
 
         if(getNextToken() == TokenType::expr_open){
-            checkIfLastToken("Expected an exit code after exit(");
             index++;
+            checkIfLastToken("Expected an exit code after exit(");
 
             Node::Expr* expr = parseIntExpr();
             if(getNextToken() == TokenType::expr_close){
-                checkIfLastToken("Expected `;` after exit statement");
                 index++;
+                checkIfLastToken("Expected `;` after exit statement");
                 if(getNextToken() == TokenType::semi){
                     Node::Exit* e = m_allocator.alloc<Node::Exit>();
                     e->expr = expr;
@@ -170,17 +179,17 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     return stmt;
                 }
                 else{
-                    Log::Error("Expected a `;` at the end of the exit statement");
+                    Log::Error("Expected a `;` at the end of the exit statement at " + getNextTokenPos());
                     exit(1);
                 }
             }
             else{
-                Log::Error("Expected a `)` after the expression of the exit statement");
+                Log::Error("Expected a `)` after the expression of the exit statement at " + getNextTokenPos());
                 exit(1);
             }
         }
         else{
-            Log::Error("Expected a `(` to call function exit");
+            Log::Error("Expected a `(` to call function exit at " + getNextTokenPos());
             exit(1);
         }
     }
@@ -244,17 +253,17 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     return stmt;
                 }
                 else{
-                    Log::Error("Expected a `;` after declaring an int variable");
+                    Log::Error("Expected a `;` after declaring an int variable at " + getNextTokenPos());
                     exit(1);
                 }
             }
             else{
-                Log::Error("Expected a `=` or `;` after giving the name of the identifier to finish the statement");
+                Log::Error("Expected a `=` or `;` after giving the name of the identifier to finish the statement at " + getNextTokenPos());
                 exit(1);
             }
         }
         else{
-            Log::Error("Expected an identifier to declare an int variable");
+            Log::Error("Expected an identifier to declare an int variable at " + getNextTokenPos());
             exit(1);
         }
     }
@@ -281,12 +290,12 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     return stmt;
                 }
                 else{
-                    Log::Error("Expected a new line after `#link` statement");
+                    Log::Error("Expected a new line after `#link` statement at " + getNextTokenPos());
                     exit(1);
                 }
             }
             else{
-                Log::Error("Expected the link file as a literal string");
+                Log::Error("Expected the link file as a literal string at " + getNextTokenPos());
                 exit(1);
             }
         }
@@ -294,7 +303,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             index++;
             checkIfLastToken("Expected an identifier name to import externally");
             if(getNextToken() != TokenType::ident){
-                Log::Error("Expected an identifier name to import externally");
+                Log::Error("Expected an identifier name to import externally at " + getNextTokenPos());
                 exit(1);
             }
 
@@ -303,7 +312,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
 
             index++;
             if(getNextToken(true) != TokenType::new_line){
-                Log::Error("Expected a new line after #extern command but got an unexpected token");
+                Log::Error("Expected a new line after #extern command but got an unexpected token at " + getNextTokenPos());
                 exit(1);
             }
 
@@ -338,7 +347,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             return stmt;
         }
 
-        Log::Error("Un-closed scope, expected `}`");
+        Log::Error("Un-closed scope, expected `}` at " + getNextTokenPos());
         exit(1);
     }
 
@@ -348,7 +357,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         index++;
 
         if(getNextToken() != TokenType::expr_open){
-            Log::Error("Expected an `(` after if keyword");
+            Log::Error("Expected an `(` after if keyword at " + getNextTokenPos());
             exit(1);
         }
         index++;
@@ -359,7 +368,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         // TODO: check for `==`, `>`, `<` and more!
 
         if(getNextToken() != TokenType::expr_close){
-            Log::Error("Expected `)` at the end of the if condition");
+            Log::Error("Expected `)` at the end of the if condition at " + getNextTokenPos());
             exit(1);
         }
         index++;
@@ -394,7 +403,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             checkIfLastToken("Expected a condition after the else if statement");
 
             if(getNextToken() != TokenType::expr_open){
-                Log::Error("Expected an `(` after else if");
+                Log::Error("Expected an `(` after else if at " + getNextTokenPos());
                 exit(1);
             }
             index++;
@@ -405,7 +414,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             // TODO: check for `==`, `>`, `<` and more!
 
             if(getNextToken() != TokenType::expr_close){
-                Log::Error("Expected `)` at the end of the else if condition");
+                Log::Error("Expected `)` at the end of the else if condition at " + getNextTokenPos());
                 exit(1);
             }
             index++;
@@ -502,7 +511,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
-                    Log::Error("Unexpected token after `+`");
+                    Log::Error("Unexpected token after `+` at " + getNextTokenPos());
                     exit(1);
                 }
                 break;
@@ -550,7 +559,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
-                    Log::Error("Unexpected token after `-`");
+                    Log::Error("Unexpected token after `-` at " + getNextTokenPos());
                     exit(1);
                 }
                 break;
@@ -575,7 +584,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
-                    Log::Error("Unexpected token after `*`");
+                    Log::Error("Unexpected token after `*` at " + getNextTokenPos());
                     exit(1);
                 }
                 break;
@@ -600,7 +609,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
-                    Log::Error("Unexpected token after `/`");
+                    Log::Error("Unexpected token after `/` at " + getNextTokenPos());
                     exit(1);
                 }
                 break;
@@ -625,7 +634,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
-                    Log::Error("Unexpected token after `%`");
+                    Log::Error("Unexpected token after `%` at " + getNextTokenPos());
                     exit(1);
                 }
                 break;
@@ -637,12 +646,12 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                 break;
 
             default:
-                Log::Error("Unexpected token after ident");
+                Log::Error("Unexpected token after ident at " + getNextTokenPos());
                 exit(1);
         }
 
         if (getNextToken() != TokenType::semi) {
-            Log::Error("Expected a `;`");
+            Log::Error("Expected a `;` at " + getNextTokenPos());
             exit(1);
         }
 
@@ -674,14 +683,14 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         index++;
         checkIfLastToken("Expected a `<` to stream into the output assembly but reached the last token");
         if(getNextToken() != TokenType::less_then){
-            Log::Error("Expected a `<` to stream into the output assembly");
+            Log::Error("Expected a `<` to stream into the output assembly at " + getNextTokenPos());
             exit(1);
         }
 
         index++;
         checkIfLastToken("Expected a string value to stream into the output assembly but reached the last token");
         if(getNextToken() != TokenType::lit_string){
-            Log::Error("Expected a string value to stream into the output assembly");
+            Log::Error("Expected a string value to stream into the output assembly at " + getNextTokenPos());
             exit(1);
         }
 
@@ -690,7 +699,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
 
         index++;
         if(getNextToken() != TokenType::semi){
-            Log::Error("Expected a `;` after the assembly statement");
+            Log::Error("Expected a `;` after the assembly statement at " + getNextTokenPos());
             exit(1);
         }
 
@@ -707,7 +716,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
     /// END OF TOKENS OR END OF SCOPE
     if(getNextToken() == TokenType::new_line || getNextToken() == TokenType::scope_close)
         return {};
-    Log::Error("Unexpected token");
+    Log::Error("Unexpected token at " + getNextTokenPos());
     exit(1);
 }
 
@@ -721,7 +730,7 @@ Node::Program *Parser::parse() {
             program.prg.emplace_back(stmt.value());
         }
         else if(getNextToken() == TokenType::scope_close){ // needed for parsing the scopes
-            Log::Error("Unexpected `}`");
+            Log::Error("Unexpected `}` at " + getNextTokenPos());
             exit(1);
         }
         else

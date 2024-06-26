@@ -97,6 +97,12 @@ int main(int argc, char* argv[]){
         Tokenizer tokenizer(content);
         tokens = tokenizer.tokenize();
     }
+
+    if(!tokens.size()){
+        Log::Error("Input file is empty");
+        exit(1);
+    }
+
     {
         Parser parser(tokens);
         Node::Program* prg = parser.parse();

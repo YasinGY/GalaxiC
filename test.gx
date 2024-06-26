@@ -1,19 +1,4 @@
-int test = 1;
-
-if(0){
-    test++;
-}
-else if(0){
-    test++;
-}
-else if(0){
-    test++;
-}
-else{
-    if(0)
-        test++;
-    else if(4)
-        test = 100;
-}
-
-exit(test);
+if(5)
+    exit(1);
+else
+    exit(5);

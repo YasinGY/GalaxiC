@@ -1,139 +1,171 @@
 #include "Tokenizer.h"
 
-
 std::vector<Token> Tokenizer::tokenize() {
     std::vector<Token> tokens;
     std::string buffer;
+    size_t column = 0;
+    size_t line = 1;
+    size_t last_buffer_col;
 
-    for(uint64_t i = 0; i < code.length(); i++){
+    for (size_t i = 0; i < code.length(); i++) {
         char c = code.at(i);
 
-        if(c == '\"'){
+        if (c == '\n') {
+            line++;
+            column = 0;
+        } else {
+            column++;
+        }
+
+        if (c == '\"') {
             std::string value;
-            while(true){
+            size_t string_start_col = column; // Record starting column of the string literal
+            while (true) {
                 i++;
-                c = code.at(i);
-                if(c == '\"'){
-                    tokens.emplace_back(Token{TokenType::lit_string, value});
-                    break;
+                if (i >= code.length()) {
+                    std::stringstream msg;
+                    msg << "Expected a closing quotation mark before end of the file at ";
+                    msg << line << ':' << string_start_col;
+                    Log::Error(msg.str());
+                    exit(1);
                 }
-                else
+                c = code.at(i);
+                if (c == '\n') {
+                    line++;
+                    column = 1;
+                } else {
+                    column++;
+                }
+                if (c == '\"') {
+                    tokens.emplace_back(Token{TokenType::lit_string, value, line, string_start_col});
+                    break;
+                } else if (c == '\n') {
+                    std::stringstream msg;
+                    msg << "Expected a closing quotation mark before end of the line at ";
+                    msg << line << ':' << column;
+                    Log::Error(msg.str());
+                    exit(1);
+                } else {
                     value += c;
+                }
             }
         }
 
-        if(isCharTokenBreaker(c)){
-            if(!buffer.empty()){
-                if(isStringInteger(buffer)){
-                    tokens.emplace_back(Token{TokenType::lit_int, buffer});
-                }
-                else if(isInTokenDict(buffer)){
+        if (isCharTokenBreaker(c)) {
+            if (!buffer.empty()) {
+                if (isStringInteger(buffer)) {
+                    tokens.emplace_back(Token{TokenType::lit_int, buffer, line, last_buffer_col});
+                } else if (isInTokenDict(buffer)) {
                     TokenType type = TokenDict[buffer];
-                    tokens.emplace_back(Token{type});
-                }
-                else{
-                    tokens.emplace_back(Token{TokenType::ident, buffer});
+                    tokens.emplace_back(Token{type, buffer, line, last_buffer_col});
+                } else {
+                    tokens.emplace_back(Token{TokenType::ident, buffer, line, last_buffer_col});
                 }
                 buffer.clear();
             }
 
-            switch(c){
+            switch (c) {
                 case '\n':
                 case '\0':
-                    tokens.emplace_back(Token{TokenType::new_line});
+                    tokens.emplace_back(Token{TokenType::new_line, {}, line, column});
                     break;
                 case ';':
-                    tokens.emplace_back(Token{TokenType::semi});
+                    tokens.emplace_back(Token{TokenType::semi, {}, line, column});
                     break;
                 case '(':
-                    tokens.emplace_back(Token{TokenType::expr_open});
+                    tokens.emplace_back(Token{TokenType::expr_open, {}, line, column});
                     break;
                 case ')':
-                    tokens.emplace_back(Token{TokenType::expr_close});
+                    tokens.emplace_back(Token{TokenType::expr_close, {}, line, column});
                     break;
                 case '{':
-                    tokens.emplace_back(Token{TokenType::scope_open});
+                    tokens.emplace_back(Token{TokenType::scope_open, {}, line, column});
                     break;
                 case '}':
-                    tokens.emplace_back(Token{TokenType::scope_close});
+                    tokens.emplace_back(Token{TokenType::scope_close, {}, line, column});
                     break;
                 case '+':
-                    tokens.emplace_back(Token{TokenType::plus});
+                    tokens.emplace_back(Token{TokenType::plus, {}, line, column});
                     break;
                 case '-':
-                    if(isdigit(code.at(i + 1)) && !isTokenInt(tokens.end()->type)){
+                    if (isdigit(code.at(i + 1)) && !isTokenInt(tokens.end()->type)) {
                         // check for negative literal ints
-                        uint64_t position = i;
+                        size_t position = i;
                         position++;
                         std::string buff = "";
-                        while(true){
-                            if(isCharTokenBreaker(code.at(position))){
-                                if(isStringInteger(buff)){
-                                    tokens.emplace_back(Token{TokenType::lit_int, '-' + buff});
+                        while (true) {
+                            if (isCharTokenBreaker(code.at(position))) {
+                                if (isStringInteger(buff)) {
+                                    tokens.emplace_back(Token{TokenType::lit_int, '-' + buff, line, column});
                                     i = position - 1;
+                                    column++;
                                     break;
-                                }
-                                else{
-                                    tokens.emplace_back(Token{TokenType::minus});
+                                } else {
+                                    tokens.emplace_back(Token{TokenType::minus, {}, line, column});
+                                    column++;
                                     break;
                                 }
                             }
                             buff += code.at(position);
                             position++;
+                            column++;
                         }
-                    }
-                    else {
-                        tokens.emplace_back(Token{TokenType::minus});
+                    } else {
+                        tokens.emplace_back(Token{TokenType::minus, {}, line, column});
                     }
                     break;
                 case '*':
-                    tokens.emplace_back(Token{TokenType::star});
+                    tokens.emplace_back(Token{TokenType::star, {}, line, column});
                     break;
                 case '/':
-                    tokens.emplace_back(Token{TokenType::slash});
+                    tokens.emplace_back(Token{TokenType::slash, {}, line, column});
                     break;
                 case '=':
-                    tokens.emplace_back(Token{TokenType::equal});
+                    tokens.emplace_back(Token{TokenType::equal, {}, line, column});
                     break;
                 case '!':
-                    tokens.emplace_back(Token{TokenType::_not});
+                    tokens.emplace_back(Token{TokenType::_not, {}, line, column});
                     break;
                 case '#':
-                    tokens.emplace_back(Token{TokenType::hash});
+                    tokens.emplace_back(Token{TokenType::hash, {}, line, column});
                     break;
                 case '%':
-                    tokens.emplace_back(Token{TokenType::percent});
+                    tokens.emplace_back(Token{TokenType::percent, {}, line, column});
                     break;
                 case '&':
-                    tokens.emplace_back(Token{TokenType::_and});
+                    tokens.emplace_back(Token{TokenType::_and, {}, line, column});
                     break;
                 case '?':
-                    tokens.emplace_back(Token{TokenType::qmark});
+                    tokens.emplace_back(Token{TokenType::qmark, {}, line, column});
                     break;
                 case ':':
-                    tokens.emplace_back(Token{TokenType::colon});
+                    tokens.emplace_back(Token{TokenType::colon, {}, line, column});
                     break;
                 case '.':
-                    tokens.emplace_back(Token{TokenType::dot});
+                    tokens.emplace_back(Token{TokenType::dot, {}, line, column});
                     break;
                 case ',':
-                    tokens.emplace_back(Token{TokenType::coma});
+                    tokens.emplace_back(Token{TokenType::coma, {}, line, column});
                     break;
                 case '<':
-                    tokens.emplace_back(Token{TokenType::less_then});
+                    tokens.emplace_back(Token{TokenType::less_then, {}, line, column});
                     break;
                 case '>':
-                    tokens.emplace_back(Token{TokenType::greater_then});
+                    tokens.emplace_back(Token{TokenType::greater_then, {}, line, column});
                     break;
             }
-        }
-        else{
+            last_buffer_col = column;
+        } else {
+            if (buffer.empty()) {
+                last_buffer_col = column;
+            }
             buffer += c;
         }
     }
 
     return tokens;
 }
+
 bool Tokenizer::isCharTokenBreaker(const char& c){
     for(char token : token_breakers)
         if(token == c)
@@ -141,6 +173,7 @@ bool Tokenizer::isCharTokenBreaker(const char& c){
 
     return false;
 }
+
 bool Tokenizer::isStringInteger(const std::string &str) {
     for(char c : str)
         if(!isdigit(c))

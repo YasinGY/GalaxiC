@@ -75,7 +75,7 @@ private:
     int target;
 
     // labels
-    uint64_t temp_labels = 0;
+    uint64_t if_labels = 0;
     // label called label + the number it is holding like label0
     // used for in a condition chain with else if and else
     uint64_t label_labels = 0;

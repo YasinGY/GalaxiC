@@ -6,8 +6,10 @@
 #include <vector>
 #include <unordered_map>
 #include <cstdint>
+#include <sstream>
 
 #include "Token.h"
+#include "Log.h"
 
 class Tokenizer{
 public:

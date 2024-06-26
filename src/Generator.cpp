@@ -187,20 +187,20 @@ void Generator::Generate(const Node::Stmt* stmt) {
             if (gen.isNextNodeIfChain()) {
                 gen.GenExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-                gen.code.text << "je temp" << gen.temp_labels << '\n';    // if false
+                gen.code.text << "je if" << gen.if_labels << '\n';    // if false
                 gen.code.text << "jmp label" << gen.label_labels << '\n'; // if true
                 gen.code.text << "label" << gen.label_labels << ":\n";
                 gen.label_labels++;
-                uint64_t temp_label_amount = gen.temp_labels;
-                gen.temp_labels++;
+                uint64_t if_label_amount = gen.if_labels;
+                gen.if_labels++;
 
                 Node::Stmt* send_stmt = new Node::Stmt();
                 send_stmt->stmt = stmt->stmt;
                 gen.Generate(send_stmt); // generates the scope
                 free(send_stmt);
 
-                gen.code.text << "temp" << temp_label_amount << ":\n";
-                gen.temp_labels++;
+                gen.code.text << "if" << if_label_amount << ":\n";
+                gen.if_labels++;
 
                 gen.index++;
                 gen.Generate(gen.prg->prg.at(gen.index));
@@ -239,20 +239,20 @@ void Generator::Generate(const Node::Stmt* stmt) {
             if (gen.isNextNodeIfChain()) {
                 gen.GenExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-                gen.code.text << "je temp" << gen.temp_labels << '\n';    // if false
+                gen.code.text << "je if" << gen.if_labels << '\n';    // if false
                 gen.code.text << "jmp label" << gen.label_labels << '\n'; // if true
                 gen.code.text << "label" << gen.label_labels << ":\n";
                 gen.label_labels++;
-                uint64_t temp_label_amount = gen.temp_labels;
-                gen.temp_labels++;
+                uint64_t if_label_amount = gen.if_labels;
+                gen.if_labels++;
 
                 Node::Stmt* send_stmt = new Node::Stmt();
                 send_stmt->stmt = stmt->stmt;
                 gen.Generate(send_stmt); // generates the scope
                 free(send_stmt);
 
-                gen.code.text << "temp" << temp_label_amount << ":\n";
-                gen.temp_labels++;
+                gen.code.text << "if" << if_label_amount << ":\n";
+                gen.if_labels++;
 
                 gen.index++;
                 gen.Generate(gen.prg->prg.at(gen.index));
