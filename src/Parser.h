@@ -16,7 +16,7 @@ public:
     inline Parser(std::vector<Token> vector)
             : tokens(vector), m_allocator(1024 * 1024 * 10) // 10 MB
     {}
-    inline ~Parser(){ m_allocator.Delete(); }
+    inline void Clear(){ m_allocator.Delete(); }
     Node::Program* parse();
 
 private:
@@ -24,8 +24,11 @@ private:
     Node::Term* parseTerm();
     std::optional<Node::Stmt*> parseStmt();
     bool isBinOp(const TokenType type);
+    bool isLogicOp();
     int getBinPrec(TokenType type);
-    Node::Expr* parseIntExpr(const int min_prec);
+    Node::IntExpr* parseIntExpr(const int min_prec = 0);
+    Node::BoolTerm* parseBoolTerm();
+    Node::BoolExpr* parseBoolExpr();
     void checkIfLastToken(const char* msg);
     std::string getNextTokenPos();
     TokenType getNextToken(bool newline = false);

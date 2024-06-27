@@ -13,4 +13,5 @@
  *      12/6: 1247 lines - scopes!
  *      14/6: 1586 lines - reassignment and negative integers!
  *      15/6: 1756 lines - direct assembly modification!
+ *      27/6: 2203 lines - booleans hopefully! not completed.
 */

@@ -108,6 +108,7 @@ int main(int argc, char* argv[]){
         Node::Program* prg = parser.parse();
         Generator generator(prg, args.target);
         content = generator.GenerateCode();
+        parser.Clear();
         links = generator.GetLinkPrograms();
     }
 

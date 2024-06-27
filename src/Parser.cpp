@@ -1,6 +1,7 @@
 #include "Parser.h"
 
 Node::Term* Parser::parseTerm()  {
+    checkIfLastToken("Expected an integer term");
     if(getNextToken() != TokenType::ident && getNextToken() != TokenType::lit_int &&
     getNextToken() != TokenType::expr_open){
         Log::Error("Expected a term (identifier or integer literal) at " + getNextTokenPos());
@@ -64,9 +65,166 @@ int Parser::getBinPrec(const TokenType type) {
     }
 }
 
-Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
+Node::BoolTerm* Parser::parseBoolTerm(){
+    auto term = m_allocator.alloc<Node::BoolTerm>();
+    auto term_int = m_allocator.alloc<Node::BoolTermInt>();
+    bool has_rhs_expr = true;
+    Node::IntExpr* lhs = parseIntExpr();
+    term_int->lhs = lhs;
+    checkIfLastToken("Expected a comparison operator after the int expression");
+    switch(getNextToken()) {
+        case TokenType::equal:{
+            index++;
+            checkIfLastToken("Expected something after comparison operator equals");
+            if (getNextToken() != TokenType::equal) {
+                Log::Error("Expected something after comparison operator equals at " + getNextTokenPos());
+                exit(1);
+            }
+            index++;
+            checkIfLastToken("Expected something after `==`");
+            term_int->comp = Node::Comparison::equal;
+            break;
+        }
+
+        case TokenType::_not: {
+            index++;
+            checkIfLastToken("Expected something after comparison operator `!`");
+            if (getNextToken() != TokenType::equal) {
+                Log::Error("Expected something after comparison operator `!` at " + getNextTokenPos());
+                exit(1);
+            }
+            index++;
+            checkIfLastToken("Expected something after `!=`");
+            term_int->comp = Node::Comparison::not_equal;
+            break;
+        }
+
+        case TokenType::greater_then: {
+            index++;
+            checkIfLastToken("Expected something after comparison operator `>`");
+            if (getNextToken() != TokenType::equal) {
+                term_int->comp = Node::Comparison::greater;
+                index++;
+                checkIfLastToken("Expected something after `>`");
+            } else {
+                term_int->comp = Node::Comparison::greater_equal;
+                index++;
+                checkIfLastToken("Expected something after `>=`");
+            }
+
+            break;
+        }
+
+        case TokenType::less_then:{
+            index++;
+            checkIfLastToken("Expected something after comparison operator `<`");
+            if (getNextToken() != TokenType::equal) {
+                term_int->comp = Node::Comparison::less;
+                index++;
+                checkIfLastToken("Expected something after `<`");
+            } else {
+                term_int->comp = Node::Comparison::less_equal;
+                index++;
+                checkIfLastToken("Expected something after `<=`");
+            }
+
+            break;
+        }
+
+        case TokenType::expr_open: {
+            index++;
+            checkIfLastToken("Expected something after `(`");
+            auto bool_expr = parseBoolExpr();
+
+            if(getNextToken() != TokenType::expr_close){
+                Log::Error("Expected `)`");
+                exit(1);
+            }
+
+            auto term_paren = m_allocator.alloc<Node::BoolTermParen>();
+            term_paren->expr = bool_expr;
+            term->term = term_paren;
+
+            break;
+        }
+
+        default:
+            has_rhs_expr = false;
+    }
+
+    if(has_rhs_expr) {
+        Node::IntExpr *rhs = parseIntExpr();
+        term_int->rhs = rhs;
+        term->term = term_int;
+    }
+    else{
+        auto rhs = m_allocator.alloc<Node::IntExpr>();
+        auto rhs_term = m_allocator.alloc<Node::Term>();
+        auto lit_int = m_allocator.alloc<Node::LitInt>();
+        lit_int->value = '0';
+        rhs_term->term = lit_int;
+        rhs->var = rhs_term;
+    }
+
+    return term;
+}
+
+bool Parser::isLogicOp(){
+    if(getNextToken() == TokenType::_and){
+        index++;
+        checkIfLastToken("Expected another `&` to make an `and` logic operator but reached the last token");
+        if(getNextToken() == TokenType::_and)
+            return true;
+        index--;
+    }
+    else if(getNextToken() == TokenType::_or){
+        index++;
+        checkIfLastToken("Expected another `|` to make an `or` logic operator but reached the last token");
+        if(getNextToken() == TokenType::_or)
+            return true;
+        index--;
+    }
+
+    return false;
+}
+
+Node::BoolExpr* Parser::parseBoolExpr(){
+    Node::BoolTerm* term_lhs = parseBoolTerm();
+    auto expr_lhs = m_allocator.alloc<Node::BoolExpr>();
+    expr_lhs->expr = term_lhs;
+
+    if(index >= tokens.size() || !isLogicOp())
+        return expr_lhs;
+
+    bool was_token_and_op = getNextToken() == TokenType::_and;
+    index++;
+    checkIfLastToken("Expected something after logical operator and, `&&`");
+
+    auto expr_rhs = parseBoolExpr();
+
+    if(was_token_and_op){
+        auto return_expr = m_allocator.alloc<Node::BoolExpr>();
+        auto and_expr = m_allocator.alloc<Node::BoolExprAnd>();
+        and_expr->lhs = expr_lhs;
+        and_expr->rhs = expr_rhs;
+        return_expr->expr = and_expr;
+        return return_expr;
+    }
+    else{
+        auto return_expr = m_allocator.alloc<Node::BoolExpr>();
+        auto or_expr = m_allocator.alloc<Node::BoolExprOr>();
+        or_expr->lhs = expr_lhs;
+        or_expr->rhs = expr_rhs;
+        return_expr->expr = or_expr;
+        return return_expr;
+    }
+
+    return expr_lhs;
+}
+
+Node::IntExpr* Parser::parseIntExpr(const int min_prec)  {
     Node::Term* term_lhs = parseTerm();
-    auto expr_lhs = m_allocator.alloc<Node::Expr>();
+    auto expr_lhs = m_allocator.alloc<Node::IntExpr>();
     expr_lhs->var = term_lhs;
     index++;
 
@@ -87,7 +245,7 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
         auto expr_rhs = parseIntExpr(next_min_prec);
 
         auto expr = m_allocator.alloc<Node::BinExpr>();
-        auto lhs = m_allocator.alloc<Node::Expr>();
+        auto lhs = m_allocator.alloc<Node::IntExpr>();
 
         lhs->var = expr_lhs->var;
 
@@ -122,7 +280,7 @@ Node::Expr* Parser::parseIntExpr(const int min_prec = 0)  {
         }
 
         // Update expr_lhs to the newly created expression
-        expr_lhs = m_allocator.alloc<Node::Expr>();
+        expr_lhs = m_allocator.alloc<Node::IntExpr>();
         expr_lhs->var = expr;
     }
 
@@ -166,7 +324,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             index++;
             checkIfLastToken("Expected an exit code after exit(");
 
-            Node::Expr* expr = parseIntExpr();
+            Node::IntExpr* expr = parseIntExpr();
             if(getNextToken() == TokenType::expr_close){
                 index++;
                 checkIfLastToken("Expected `;` after exit statement");
@@ -363,9 +521,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
         index++;
 
         auto _if = m_allocator.alloc<Node::If>();
-        auto expr = parseIntExpr();
-
-        // TODO: check for `==`, `>`, `<` and more!
+        auto expr = parseBoolExpr();
 
         if(getNextToken() != TokenType::expr_close){
             Log::Error("Expected `)` at the end of the if condition at " + getNextTokenPos());
@@ -409,9 +565,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             index++;
             checkIfLastToken("Expected a condition to check after `else if(`");
 
-            auto expr = parseIntExpr();
-
-            // TODO: check for `==`, `>`, `<` and more!
+            auto expr = parseBoolExpr();
 
             if(getNextToken() != TokenType::expr_close){
                 Log::Error("Expected `)` at the end of the else if condition at " + getNextTokenPos());
@@ -475,8 +629,8 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprAdd* binExprAdd = m_allocator.alloc<Node::BinExprAdd>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
-                    Node::Expr* rhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
+                    Node::IntExpr* rhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     Node::Term* rhsTerm = m_allocator.alloc<Node::Term>();
                     Node::LitInt* rhsInt = m_allocator.alloc<Node::LitInt>();
@@ -490,7 +644,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     binExprAdd->rhs = rhs;
                     binExpr->expr = binExprAdd;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else if (getNextToken() == TokenType::equal) {
@@ -498,16 +652,16 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprAdd* binExprAdd = m_allocator.alloc<Node::BinExprAdd>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     lhsTerm->term = ident;
                     lhs->var = lhsTerm;
-                    Node::Expr* rhs = parseIntExpr();
+                    Node::IntExpr* rhs = parseIntExpr();
                     binExprAdd->lhs = lhs;
                     binExprAdd->rhs = rhs;
                     binExpr->expr = binExprAdd;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
@@ -523,8 +677,8 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprSub* binExprSub = m_allocator.alloc<Node::BinExprSub>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
-                    Node::Expr* rhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
+                    Node::IntExpr* rhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     Node::Term* rhsTerm = m_allocator.alloc<Node::Term>();
                     Node::LitInt* rhsInt = m_allocator.alloc<Node::LitInt>();
@@ -538,7 +692,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     binExprSub->rhs = rhs;
                     binExpr->expr = binExprSub;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else if (getNextToken() == TokenType::equal) {
@@ -546,16 +700,16 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprSub* binExprSub = m_allocator.alloc<Node::BinExprSub>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     lhsTerm->term = ident;
                     lhs->var = lhsTerm;
-                    Node::Expr* rhs = parseIntExpr();
+                    Node::IntExpr* rhs = parseIntExpr();
                     binExprSub->lhs = lhs;
                     binExprSub->rhs = rhs;
                     binExpr->expr = binExprSub;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
@@ -571,16 +725,16 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprMul* binExprMul = m_allocator.alloc<Node::BinExprMul>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     lhsTerm->term = ident;
                     lhs->var = lhsTerm;
-                    Node::Expr* rhs = parseIntExpr();
+                    Node::IntExpr* rhs = parseIntExpr();
                     binExprMul->lhs = lhs;
                     binExprMul->rhs = rhs;
                     binExpr->expr = binExprMul;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
@@ -596,16 +750,16 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprDiv* binExprDiv = m_allocator.alloc<Node::BinExprDiv>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     lhsTerm->term = ident;
                     lhs->var = lhsTerm;
-                    Node::Expr* rhs = parseIntExpr();
+                    Node::IntExpr* rhs = parseIntExpr();
                     binExprDiv->lhs = lhs;
                     binExprDiv->rhs = rhs;
                     binExpr->expr = binExprDiv;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {
@@ -621,16 +775,16 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                     index++;
                     Node::BinExpr* binExpr = m_allocator.alloc<Node::BinExpr>();
                     Node::BinExprMod* binExprMod = m_allocator.alloc<Node::BinExprMod>();
-                    Node::Expr* lhs = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* lhs = m_allocator.alloc<Node::IntExpr>();
                     Node::Term* lhsTerm = m_allocator.alloc<Node::Term>();
                     lhsTerm->term = ident;
                     lhs->var = lhsTerm;
-                    Node::Expr* rhs = parseIntExpr();
+                    Node::IntExpr* rhs = parseIntExpr();
                     binExprMod->lhs = lhs;
                     binExprMod->rhs = rhs;
                     binExpr->expr = binExprMod;
 
-                    Node::Expr* expr = m_allocator.alloc<Node::Expr>();
+                    Node::IntExpr* expr = m_allocator.alloc<Node::IntExpr>();
                     expr->var = binExpr;
                     stmt->expr = expr;
                 } else {

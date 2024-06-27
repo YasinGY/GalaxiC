@@ -12,7 +12,7 @@ namespace Node{
         none = 0, add, sub, mul, div, rest
     };
 
-    struct Expr;
+    struct IntExpr;
 
     struct LitString{
         std::string value;
@@ -27,7 +27,7 @@ namespace Node{
     };
 
     struct TermParen{
-        Expr* expr;
+        IntExpr* expr;
     };
 
     struct Term{
@@ -35,50 +35,84 @@ namespace Node{
     };
 
     struct BinExprAdd{
-        Expr* lhs;
-        Expr* rhs;
+        IntExpr* lhs;
+        IntExpr* rhs;
     };
 
     struct BinExprSub{
-        Expr* lhs;
-        Expr* rhs;
+        IntExpr* lhs;
+        IntExpr* rhs;
     };
 
     struct BinExprMul{
-        Expr* lhs;
-        Expr* rhs;
+        IntExpr* lhs;
+        IntExpr* rhs;
     };
 
     struct BinExprDiv{
-        Expr* lhs;
-        Expr* rhs;
+        IntExpr* lhs;
+        IntExpr* rhs;
     };
 
     struct BinExprMod{
-        Expr* lhs;
-        Expr* rhs;
+        IntExpr* lhs;
+        IntExpr* rhs;
     };
 
     struct BinExpr{
         std::variant<BinExprAdd*, BinExprSub*, BinExprMul*, BinExprDiv*, BinExprMod*> expr;
     };
 
-    struct Expr{
+    struct IntExpr{
         std::variant<Term*, BinExpr*> var;
+    };
+
+    struct BoolExpr;
+
+    struct BoolExprAnd{
+        BoolExpr* lhs;
+        BoolExpr* rhs;
+    };
+
+    struct BoolExprOr{
+        BoolExpr* lhs;
+        BoolExpr* rhs;
+    };
+
+    enum class Comparison{
+        equal, greater, less, greater_equal, less_equal, not_equal
+    };
+
+    struct BoolTermInt{
+        IntExpr* lhs;
+        Comparison comp;
+        IntExpr* rhs;
+    };
+
+    struct BoolTermParen{
+        BoolExpr* expr;
+    };
+
+    struct BoolTerm{
+        std::variant<BoolTermInt*, BoolTermParen*> term;
+    };
+
+    struct BoolExpr{
+        std::variant<BoolExprAnd*, BoolExprOr*, BoolTerm*> expr;
     };
 
     struct Reassign{
         Ident* ident;
-        Expr* expr;
+        IntExpr* expr;
     };
 
     struct Exit{
-        Expr* expr;
+        IntExpr* expr;
     };
 
     struct Variable{
         VarType type;
-        Expr* expr;
+        IntExpr* expr;
         Ident* ident;
     };
 
@@ -93,12 +127,12 @@ namespace Node{
     };
 
     struct If{
-        Expr* expr;
+        BoolExpr* expr;
         Scope* stmt;
     };
 
     struct Elif{
-        Expr* expr;
+        BoolExpr* expr;
         Scope* stmt;
     };
 

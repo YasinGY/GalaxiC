@@ -74,7 +74,7 @@ void Generator::GenBinExpr(const Node::BinExpr* expr) {
     std::visit(visitor, expr->expr);
 }
 
-void Generator::GenExpr(const Node::Expr* expr, const std::string reg) {
+void Generator::GenExpr(const Node::IntExpr* expr, const std::string reg) {
     if(std::holds_alternative<Node::Term*>(expr->var))
         GenTerm(std::get<Node::Term*>(expr->var), reg);
 
@@ -302,7 +302,7 @@ std::vector<std::string> Generator::GetLinkPrograms() {
     return prg_links;
 }
 
-bool Generator::isExprInit(const Node::Expr *expr) {
+bool Generator::isExprInit(const Node::IntExpr *expr) {
     if(!std::holds_alternative<Node::Term*>(expr->var))
         return true;
 
