@@ -7,6 +7,7 @@
 #include "Node.h"
 #include "Log.h"
 #include "Storage.h"
+#include "Labels.h"
 
 class Generator{
 public:
@@ -36,6 +37,9 @@ public:
         for(index = 0; index <= prg->prg.size() - 1; index++)
             Generate(prg->prg.at(index));
 
+        code.text << "mov " << bit << "ax, 0\n";
+        code.text << "ret\n";
+
         return code.external.str() + code.data.str() + code.bbs.str() + code.text.str();
     };
 
@@ -51,6 +55,8 @@ private:
     void GenTerm(const Node::Term* term, const std::string reg);
     void GenExpr(const Node::IntExpr* expr, const std::string reg);
     void GenBinExpr(const Node::BinExpr* expr);
+    void GenBoolExpr(const Node::BoolExpr* expr, const std::string reg);
+    void GenBoolTerm(const Node::BoolTerm* term, const std::string reg);
     bool isExprInit(const Node::IntExpr* expr);
     void Generate(const Node::Stmt* stmt);
     inline bool isNextNodeIfChain() {
@@ -71,14 +77,9 @@ private:
     std::vector<std::string> prg_links;
     AsmStructure code;
     Storage storage;
+    Labels labels;
     std::string bit;
     int target;
 
-    // labels
-    uint64_t if_labels = 0;
-    // label called label + the number it is holding like label0
-    // used for in a condition chain with else if and else
-    uint64_t label_labels = 0;
-    uint64_t main_labels = 0;
     uint64_t index;
 };

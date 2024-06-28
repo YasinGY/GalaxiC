@@ -135,6 +135,9 @@ std::vector<Token> Tokenizer::tokenize() {
                 case '&':
                     tokens.emplace_back(Token{TokenType::_and, {}, line, column});
                     break;
+                case '|':
+                    tokens.emplace_back(Token{TokenType::_or, {}, line, column});
+                    break;
                 case '?':
                     tokens.emplace_back(Token{TokenType::qmark, {}, line, column});
                     break;

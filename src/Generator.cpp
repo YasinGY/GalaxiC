@@ -82,6 +82,52 @@ void Generator::GenExpr(const Node::IntExpr* expr, const std::string reg) {
         GenBinExpr(std::get<Node::BinExpr*>(expr->var));
 }
 
+void Generator::GenBoolTerm(const Node::BoolTerm *term, const std::string reg) {
+    // TODO
+}
+
+/// Puts 0 in the argument `reg` if false and 1 if its true
+void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg) {
+
+    struct BooleanVisitor{
+        Generator& gen;
+        BooleanVisitor(Generator& generator) : gen(generator) {}
+
+        void operator()(const Node::BoolExprAnd* expr){
+            gen.code.text << "mov " << gen.bit << "dx, 0\n";
+
+            gen.GenBoolExpr(expr->lhs, gen.bit + "ax");
+            gen.code.text << "cmp " << gen.bit << "ax, 1\n";
+            gen.code.text << "je bool" << gen.labels.bool_labels << '\n';
+            gen.code.text << "bool" << gen.labels.bool_labels << ":\n";
+            gen.labels.bool_labels++;
+
+            gen.GenBoolExpr(expr->rhs, gen.bit + "ax");
+            gen.code.text << "cmp " << gen.bit << "ax, 1\n";
+            gen.code.text << "je bool" << gen.labels.bool_labels << '\n';
+            gen.code.text << "bool" << gen.labels.bool_labels << ":\n";
+            gen.labels.bool_labels++;
+
+            // TODO
+        }
+
+        void operator()(const Node::BoolExprOr* expr){
+            // TODO
+        }
+
+        void operator()(const Node::BoolTerm* term){
+            gen.GenBoolTerm(term, gen.bit + "ax"); // 1 if true and 0 if false
+            // TODO
+        }
+    };
+
+    if(reg != bit + "ax")
+        code.text << "mov " << reg << ", " << bit << "ax\n";
+
+    BooleanVisitor visitor(*this);
+    std::visit(visitor, expr->expr);
+}
+
 void Generator::Generate(const Node::Stmt* stmt) {
 
     struct ProgVisitor {
@@ -185,14 +231,14 @@ void Generator::Generate(const Node::Stmt* stmt) {
 
         void operator()(const Node::If* stmt) {
             if (gen.isNextNodeIfChain()) {
-                gen.GenExpr(stmt->expr, gen.bit + "ax");
+//                gen.GenExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-                gen.code.text << "je if" << gen.if_labels << '\n';    // if false
-                gen.code.text << "jmp label" << gen.label_labels << '\n'; // if true
-                gen.code.text << "label" << gen.label_labels << ":\n";
-                gen.label_labels++;
-                uint64_t if_label_amount = gen.if_labels;
-                gen.if_labels++;
+                gen.code.text << "je if" << gen.labels.if_labels << '\n';    // if false
+                gen.code.text << "jmp label" << gen.labels.label_labels << '\n'; // if true
+                gen.code.text << "label" << gen.labels.label_labels << ":\n";
+                gen.labels.label_labels++;
+                uint64_t if_label_amount = gen.labels.if_labels;
+                gen.labels.if_labels++;
 
                 Node::Stmt* send_stmt = new Node::Stmt();
                 send_stmt->stmt = stmt->stmt;
@@ -200,32 +246,32 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 free(send_stmt);
 
                 gen.code.text << "if" << if_label_amount << ":\n";
-                gen.if_labels++;
+                gen.labels.if_labels++;
 
                 gen.index++;
                 gen.Generate(gen.prg->prg.at(gen.index));
 
-                gen.code.text << "main" << gen.main_labels << ":\n";
-                gen.main_labels++;
+                gen.code.text << "main" << gen.labels.main_labels << ":\n";
+                gen.labels.main_labels++;
             }
             else{
-                gen.GenExpr(stmt->expr, gen.bit + "ax");
+//                gen.GenExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-                gen.code.text << "je main" << gen.main_labels << '\n'; // its 0/false
-                gen.code.text << "jmp label" << gen.label_labels << '\n';
+                gen.code.text << "je main" << gen.labels.main_labels << '\n'; // its 0/false
+                gen.code.text << "jmp label" << gen.labels.label_labels << '\n';
 
-                gen.code.text << "label" << gen.label_labels << ":\n";
+                gen.code.text << "label" << gen.labels.label_labels << ":\n";
 
                 Node::Stmt* send_stmt = new Node::Stmt();
                 send_stmt->stmt = stmt->stmt;
                 gen.Generate(send_stmt); // generates the scope
                 free(send_stmt);
 
-                gen.code.text << "jmp main" << gen.main_labels << '\n';
+                gen.code.text << "jmp main" << gen.labels.main_labels << '\n';
 
-                gen.code.text << "main" << gen.main_labels << ":\n";
-                gen.label_labels++;
-                gen.main_labels++;
+                gen.code.text << "main" << gen.labels.main_labels << ":\n";
+                gen.labels.label_labels++;
+                gen.labels.main_labels++;
             }
         }
 
@@ -237,14 +283,14 @@ void Generator::Generate(const Node::Stmt* stmt) {
             }
 
             if (gen.isNextNodeIfChain()) {
-                gen.GenExpr(stmt->expr, gen.bit + "ax");
+//                gen.GenExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-                gen.code.text << "je if" << gen.if_labels << '\n';    // if false
-                gen.code.text << "jmp label" << gen.label_labels << '\n'; // if true
-                gen.code.text << "label" << gen.label_labels << ":\n";
-                gen.label_labels++;
-                uint64_t if_label_amount = gen.if_labels;
-                gen.if_labels++;
+                gen.code.text << "je if" << gen.labels.if_labels << '\n';    // if false
+                gen.code.text << "jmp label" << gen.labels.label_labels << '\n'; // if true
+                gen.code.text << "label" << gen.labels.label_labels << ":\n";
+                gen.labels.label_labels++;
+                uint64_t if_label_amount = gen.labels.if_labels;
+                gen.labels.if_labels++;
 
                 Node::Stmt* send_stmt = new Node::Stmt();
                 send_stmt->stmt = stmt->stmt;
@@ -252,19 +298,19 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 free(send_stmt);
 
                 gen.code.text << "if" << if_label_amount << ":\n";
-                gen.if_labels++;
+                gen.labels.if_labels++;
 
                 gen.index++;
                 gen.Generate(gen.prg->prg.at(gen.index));
             }
             else{
-                gen.GenExpr(stmt->expr, gen.bit + "ax");
+//                gen.GenExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
-                gen.code.text << "je main" << gen.main_labels << '\n'; // its 0/false
-                gen.code.text << "jmp label" << gen.label_labels << '\n';
+                gen.code.text << "je main" << gen.labels.main_labels << '\n'; // its 0/false
+                gen.code.text << "jmp label" << gen.labels.label_labels << '\n';
 
-                gen.code.text << "label" << gen.label_labels << ":\n";
-                gen.label_labels++;
+                gen.code.text << "label" << gen.labels.label_labels << ":\n";
+                gen.labels.label_labels++;
 
                 Node::Stmt* send_stmt = new Node::Stmt();
                 send_stmt->stmt = stmt->stmt;
@@ -280,17 +326,17 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 exit(1);
             }
 
-            gen.code.text << "jmp label" << gen.label_labels << '\n';
+            gen.code.text << "jmp label" << gen.labels.label_labels << '\n';
 
-            gen.code.text << "label" << gen.label_labels << ":\n";
-            gen.label_labels++;
+            gen.code.text << "label" << gen.labels.label_labels << ":\n";
+            gen.labels.label_labels++;
 
             Node::Stmt* send_stmt = new Node::Stmt();
             send_stmt->stmt = stmt->stmt;
             gen.Generate(send_stmt); // generates the scope
             free(send_stmt);
 
-            gen.code.text << "jmp main" << gen.main_labels << '\n';
+            gen.code.text << "jmp main" << gen.labels.main_labels << '\n';
         }
     };
 

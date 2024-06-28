@@ -38,40 +38,26 @@ Node::Term* Parser::parseTerm()  {
     return term;
 }
 
-bool Parser::isBinOp(const TokenType type) {
-    switch (type) {
-        case TokenType::plus:
-        case TokenType::minus:
-        case TokenType::star:
-        case TokenType::slash:
-        case TokenType::percent:
-            return true;
-        default:
-            return false;
-    }
-}
-
-int Parser::getBinPrec(const TokenType type) {
-    switch(type) {
-        case TokenType::plus:
-        case TokenType::minus:
-            return 0;
-        case TokenType::star:
-        case TokenType::slash:
-        case TokenType::percent:
-            return 1;
-        default:
-            return -1;
-    }
-}
-
 Node::BoolTerm* Parser::parseBoolTerm(){
     auto term = m_allocator.alloc<Node::BoolTerm>();
     auto term_int = m_allocator.alloc<Node::BoolTermInt>();
     bool has_rhs_expr = true;
+
+    if(getNextToken() == TokenType::expr_open) {
+        index++;
+        checkIfLastToken("Expected something after `(`");
+        auto expr = parseBoolExpr();
+        auto term_paren = m_allocator.alloc<Node::BoolTermParen>();
+        term_paren->expr = expr;
+        term->term = term_paren;
+        index++; // skip the `)` at the end of the parentheses
+        return term;
+    }
+
     Node::IntExpr* lhs = parseIntExpr();
     term_int->lhs = lhs;
     checkIfLastToken("Expected a comparison operator after the int expression");
+
     switch(getNextToken()) {
         case TokenType::equal:{
             index++;
@@ -104,7 +90,6 @@ Node::BoolTerm* Parser::parseBoolTerm(){
             checkIfLastToken("Expected something after comparison operator `>`");
             if (getNextToken() != TokenType::equal) {
                 term_int->comp = Node::Comparison::greater;
-                index++;
                 checkIfLastToken("Expected something after `>`");
             } else {
                 term_int->comp = Node::Comparison::greater_equal;
@@ -120,7 +105,6 @@ Node::BoolTerm* Parser::parseBoolTerm(){
             checkIfLastToken("Expected something after comparison operator `<`");
             if (getNextToken() != TokenType::equal) {
                 term_int->comp = Node::Comparison::less;
-                index++;
                 checkIfLastToken("Expected something after `<`");
             } else {
                 term_int->comp = Node::Comparison::less_equal;
@@ -131,39 +115,25 @@ Node::BoolTerm* Parser::parseBoolTerm(){
             break;
         }
 
-        case TokenType::expr_open: {
-            index++;
-            checkIfLastToken("Expected something after `(`");
-            auto bool_expr = parseBoolExpr();
-
-            if(getNextToken() != TokenType::expr_close){
-                Log::Error("Expected `)`");
-                exit(1);
-            }
-
-            auto term_paren = m_allocator.alloc<Node::BoolTermParen>();
-            term_paren->expr = bool_expr;
-            term->term = term_paren;
-
+        default: {
+            has_rhs_expr = false;
+            auto int_expr = m_allocator.alloc<Node::IntExpr>();
+            auto int_term = m_allocator.alloc<Node::Term>();
+            auto lit_int = m_allocator.alloc<Node::LitInt>();
+            lit_int->value = "0";
+            int_term->term = lit_int;
+            int_expr->var = int_term;
+            term_int->rhs = int_expr;
+            term_int->comp = Node::Comparison::not_equal;
+            term->term = term_int;
             break;
         }
-
-        default:
-            has_rhs_expr = false;
     }
 
     if(has_rhs_expr) {
         Node::IntExpr *rhs = parseIntExpr();
         term_int->rhs = rhs;
         term->term = term_int;
-    }
-    else{
-        auto rhs = m_allocator.alloc<Node::IntExpr>();
-        auto rhs_term = m_allocator.alloc<Node::Term>();
-        auto lit_int = m_allocator.alloc<Node::LitInt>();
-        lit_int->value = '0';
-        rhs_term->term = lit_int;
-        rhs->var = rhs_term;
     }
 
     return term;
@@ -218,8 +188,33 @@ Node::BoolExpr* Parser::parseBoolExpr(){
         return_expr->expr = or_expr;
         return return_expr;
     }
+}
 
-    return expr_lhs;
+bool Parser::isBinOp(const TokenType type) {
+    switch (type) {
+        case TokenType::plus:
+        case TokenType::minus:
+        case TokenType::star:
+        case TokenType::slash:
+        case TokenType::percent:
+            return true;
+        default:
+            return false;
+    }
+}
+
+int Parser::getBinPrec(const TokenType type) {
+    switch(type) {
+        case TokenType::plus:
+        case TokenType::minus:
+            return 0;
+        case TokenType::star:
+        case TokenType::slash:
+        case TokenType::percent:
+            return 1;
+        default:
+            return -1;
+    }
 }
 
 Node::IntExpr* Parser::parseIntExpr(const int min_prec)  {
