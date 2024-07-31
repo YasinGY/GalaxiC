@@ -19,8 +19,7 @@ void Generator::GenTerm(const Node::Term *term, const std::string reg) {
             exit(1);
         }
 
-        code.text << "mov " << bit <<
-        "ax, [" << bit << "sp + " << storage.GetStackPosition(ident->value) << "]\n";
+        code.text << "mov " << reg << ", [" << bit << "sp + " << storage.GetStackPosition(ident->value) << "]\n";
     }
     else if(std::holds_alternative<Node::TermParen*>(term->term)){
         auto paren = std::get<Node::TermParen*>(term->term);
@@ -82,8 +81,97 @@ void Generator::GenExpr(const Node::IntExpr* expr, const std::string reg) {
         GenBinExpr(std::get<Node::BinExpr*>(expr->var));
 }
 
-void Generator::GenBoolTerm(const Node::BoolTerm *term, const std::string reg) {
-    // TODO
+void Generator::GenBoolTerm(const Node::BoolTermInt *term, const std::string reg) {
+    GenExpr(term->rhs, bit + "dx");
+    GenExpr(term->lhs, bit + "ax");
+    code.text << "mov " << bit << "bx, " << bit << "dx\n";
+    code.text << "cmp " << bit << "ax, " << bit << "bx\n";
+    code.text << "mov " << bit << "dx, 0\n";
+
+    switch(term->comp){
+        case Node::Comparison::equal:
+            code.text << "je temp" << labels.temp_labels << '\n';
+            code.text << "jmp temp" << (labels.temp_labels + 1) << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+            code.text << "mov " << bit << "dx, 1\n";
+            code.text << "jmp temp" << labels.temp_labels << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+
+            break;
+        case Node::Comparison::not_equal:
+            code.text << "jne temp" << labels.temp_labels << '\n';
+            code.text << "jmp temp" << (labels.temp_labels + 1) << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+            code.text << "mov " << bit << "dx, 1\n";
+            code.text << "jmp temp" << labels.temp_labels << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+
+            break;
+        case Node::Comparison::greater:
+            code.text << "jg temp" << labels.temp_labels << '\n';
+            code.text << "jmp temp" << (labels.temp_labels + 1) << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+            code.text << "mov " << bit << "dx, 1\n";
+            code.text << "jmp temp" << labels.temp_labels << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+
+            break;
+        case Node::Comparison::greater_equal:
+            code.text << "jg temp" << labels.temp_labels << '\n';
+            code.text << "je temp" << labels.temp_labels << '\n';
+            code.text << "jmp temp" << (labels.temp_labels + 1) << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+            code.text << "mov " << bit << "dx, 1\n";
+            code.text << "jmp temp" << labels.temp_labels << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+
+            break;
+        case Node::Comparison::less:
+            code.text << "jl temp" << labels.temp_labels << '\n';
+            code.text << "jmp temp" << (labels.temp_labels + 1) << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+            code.text << "mov " << bit << "dx, 1\n";
+            code.text << "jmp temp" << labels.temp_labels << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+
+            break;
+        case Node::Comparison::less_equal:
+            code.text << "jl temp" << labels.temp_labels << '\n';
+            code.text << "je temp" << labels.temp_labels << '\n';
+            code.text << "jmp temp" << (labels.temp_labels + 1) << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+            code.text << "mov " << bit << "dx, 1\n";
+            code.text << "jmp temp" << labels.temp_labels << '\n';
+
+            code.text << "temp" << labels.temp_labels << ":\n";
+            labels.temp_labels++;
+
+            break;
+    }
+
+    code.text << "mov " << reg << ", " << bit << "dx\n";
 }
 
 /// Puts 0 in the argument `reg` if false and 1 if its true
@@ -94,38 +182,64 @@ void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg) {
         BooleanVisitor(Generator& generator) : gen(generator) {}
 
         void operator()(const Node::BoolExprAnd* expr){
+
+            gen.GenBoolExpr(expr->lhs, gen.bit + "ax");
+            gen.code.text << "cmp " << gen.bit << "ax, 1\n";
+            gen.code.text << "je bool" << gen.labels.bool_labels << '\n';
+            gen.code.text << "mov " << gen.bit << "dx, 0\n";
+            gen.code.text << "jmp bool_end" << gen.labels.label_labels << '\n';
+
+            gen.code.text << "bool" << gen.labels.bool_labels << ":\n";
+            gen.labels.bool_labels++;
+            gen.GenBoolExpr(expr->rhs, gen.bit + "ax");
+            gen.code.text << "cmp " << gen.bit << "ax, 1\n";
+            gen.code.text << "je bool" << gen.labels.bool_labels << '\n';
+            gen.code.text << "mov " << gen.bit << "dx, 0\n";
+            gen.code.text << "jmp bool_end" << gen.labels.label_labels << '\n';
+
+            gen.code.text << "bool" << gen.labels.bool_labels << ":\n";
+            gen.code.text << "mov " << gen.bit << "dx, 1\n";
+
+            gen.labels.bool_labels++;
+            gen.code.text << "bool_end" << gen.labels.label_labels << ":\n";
+            gen.labels.label_labels++;
+        }
+
+        void operator()(const Node::BoolExprOr* expr){
             gen.code.text << "mov " << gen.bit << "dx, 0\n";
 
             gen.GenBoolExpr(expr->lhs, gen.bit + "ax");
             gen.code.text << "cmp " << gen.bit << "ax, 1\n";
             gen.code.text << "je bool" << gen.labels.bool_labels << '\n';
-            gen.code.text << "bool" << gen.labels.bool_labels << ":\n";
-            gen.labels.bool_labels++;
 
             gen.GenBoolExpr(expr->rhs, gen.bit + "ax");
             gen.code.text << "cmp " << gen.bit << "ax, 1\n";
             gen.code.text << "je bool" << gen.labels.bool_labels << '\n';
+
             gen.code.text << "bool" << gen.labels.bool_labels << ":\n";
+            gen.code.text << "mov " << gen.bit << "dx, 1\n";
+
             gen.labels.bool_labels++;
-
-            // TODO
-        }
-
-        void operator()(const Node::BoolExprOr* expr){
-            // TODO
         }
 
         void operator()(const Node::BoolTerm* term){
-            gen.GenBoolTerm(term, gen.bit + "ax"); // 1 if true and 0 if false
-            // TODO
+            if(std::holds_alternative<Node::BoolTermParen*>(term->term)){
+                auto paren = std::get<Node::BoolTermParen*>(term->term);
+                gen.GenBoolExpr(paren->expr, gen.bit + "ax");
+
+                return;
+            }
+
+            auto bool_term = std::get<Node::BoolTermInt*>(term->term);
+            gen.GenBoolTerm(bool_term, gen.bit + "ax");
         }
     };
 
-    if(reg != bit + "ax")
-        code.text << "mov " << reg << ", " << bit << "ax\n";
-
     BooleanVisitor visitor(*this);
     std::visit(visitor, expr->expr);
+
+    if(reg != bit + "ax")
+        code.text << "mov " << reg << ", " << bit << "ax\n";
 }
 
 void Generator::Generate(const Node::Stmt* stmt) {
@@ -163,34 +277,34 @@ void Generator::Generate(const Node::Stmt* stmt) {
 
             switch(stmt->type){
                 case VarType::_char:
-                    gen.GenExpr(stmt->expr, "al");
+                    gen.GenExpr(std::get<Node::IntExpr*>(stmt->expr->expr), "al");
                     gen.code.text << "sub " << gen.bit << "sp, 8\n";
                     gen.code.text << "mov [" << gen.bit << "sp], al\n";
                     break;
-                case VarType::_int16:
-                    gen.GenExpr(stmt->expr, "ax");
+                case VarType::_short:
+                    gen.GenExpr(std::get<Node::IntExpr*>(stmt->expr->expr), "ax");
                     gen.code.text << "sub " << gen.bit << "sp, 16\n";
                     gen.code.text << "mov [" << gen.bit << "sp], ax\n";
                     break;
-                case VarType::_int32:
-                case VarType::_float:
-                    gen.GenExpr(stmt->expr, "eax");
+                case VarType::_int:
+                    gen.GenExpr(std::get<Node::IntExpr*>(stmt->expr->expr), "eax");
                     gen.code.text << "sub " << gen.bit << "sp, 32\n";
                     gen.code.text << "mov [" << gen.bit << "sp], eax\n";
                     break;
-                case VarType::_int64:
-                case VarType::_double:
-                    if(gen.target == PLATFORM_LINUX32 || gen.target == PLATFORM_WIN32){
+                case VarType::_long:
+                    if(gen.bit != "r"){
                         Log::Error("You cant have an long/int64 in a 32-bit program");
                         exit(1);
                     }
-                    gen.GenExpr(stmt->expr, "rax");
-                    gen.code.text << "sub " << gen.bit << "sp, 64\n";
-                    gen.code.text << "mov [" << gen.bit << "sp], rax\n";
+                    gen.GenExpr(std::get<Node::IntExpr*>(stmt->expr->expr), "rax");
+                    gen.code.text << "sub rsp, 64\n";
+                    gen.code.text << "mov [rsp], rax\n";
                     break;
-                case VarType::_string:
-                    Log::Error("string not implemented");
-                    exit(1);
+                case VarType::_bool:
+                    gen.GenBoolExpr(std::get<Node::BoolExpr*>(stmt->expr->expr), gen.bit + "ax");
+                    gen.code.text << "sub " << gen.bit << "sp, 8\n";
+                    gen.code.text << "mov [" << gen.bit << "sp], " << gen.bit << "ax\n";
+                    break;
             }
         }
 
@@ -231,7 +345,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
 
         void operator()(const Node::If* stmt) {
             if (gen.isNextNodeIfChain()) {
-//                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
                 gen.code.text << "je if" << gen.labels.if_labels << '\n';    // if false
                 gen.code.text << "jmp label" << gen.labels.label_labels << '\n'; // if true
@@ -255,7 +369,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 gen.labels.main_labels++;
             }
             else{
-//                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
                 gen.code.text << "je main" << gen.labels.main_labels << '\n'; // its 0/false
                 gen.code.text << "jmp label" << gen.labels.label_labels << '\n';
@@ -283,7 +397,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
             }
 
             if (gen.isNextNodeIfChain()) {
-//                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
                 gen.code.text << "je if" << gen.labels.if_labels << '\n';    // if false
                 gen.code.text << "jmp label" << gen.labels.label_labels << '\n'; // if true
@@ -304,7 +418,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 gen.Generate(gen.prg->prg.at(gen.index));
             }
             else{
-//                gen.GenExpr(stmt->expr, gen.bit + "ax");
+                gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
                 gen.code.text << "je main" << gen.labels.main_labels << '\n'; // its 0/false
                 gen.code.text << "jmp label" << gen.labels.label_labels << '\n';
@@ -348,17 +462,6 @@ std::vector<std::string> Generator::GetLinkPrograms() {
     return prg_links;
 }
 
-bool Generator::isExprInit(const Node::IntExpr *expr) {
-    if(!std::holds_alternative<Node::Term*>(expr->var))
-        return true;
-
-    auto term = std::get<Node::Term*>(expr->var);
-    if(!std::holds_alternative<Node::Ident*>(term->term))
-        return true;
-
-    auto ident = std::get<Node::Ident*>(term->term);
-    if(ident->value != "")
-        return true;
-
-    return false;
+bool Generator::isExprInit(const Node::Expr *expr) {
+    return expr != NULL;
 }

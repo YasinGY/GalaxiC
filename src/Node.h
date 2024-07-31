@@ -1,9 +1,6 @@
 #pragma once
 
-#include <string>
-#include <variant>
-#include <vector>
-
+#include "PCH.h"
 #include "Variable.h"
 #include "Token.h"
 
@@ -110,9 +107,13 @@ namespace Node{
         IntExpr* expr;
     };
 
+    struct Expr{
+        std::variant<BoolExpr*, IntExpr*> expr;
+    };
+
     struct Variable{
         VarType type;
-        IntExpr* expr;
+        Expr* expr;
         Ident* ident;
     };
 

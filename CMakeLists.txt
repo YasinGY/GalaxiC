@@ -21,4 +21,5 @@ add_executable(GalaxiC src/main.cpp
         src/Assemble.cpp
         src/Variable.h
         src/Labels.h
+        src/PCH.h
 )

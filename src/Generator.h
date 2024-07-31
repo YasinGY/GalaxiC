@@ -56,8 +56,8 @@ private:
     void GenExpr(const Node::IntExpr* expr, const std::string reg);
     void GenBinExpr(const Node::BinExpr* expr);
     void GenBoolExpr(const Node::BoolExpr* expr, const std::string reg);
-    void GenBoolTerm(const Node::BoolTerm* term, const std::string reg);
-    bool isExprInit(const Node::IntExpr* expr);
+    void GenBoolTerm(const Node::BoolTermInt* term, const std::string reg);
+    bool isExprInit(const Node::Expr* expr);
     void Generate(const Node::Stmt* stmt);
     inline bool isNextNodeIfChain() {
         if (isLastNode()) {

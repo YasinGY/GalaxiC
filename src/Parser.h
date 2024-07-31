@@ -1,10 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
-#include <cstdint>
-#include <sstream>
-
+#include "PCH.h"
 #include "Core.h"
 #include "Log.h"
 #include "Token.h"

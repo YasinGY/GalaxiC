@@ -1,12 +1,11 @@
 #pragma once
 
-#include <string>
-#include <optional>
+#include "PCH.h"
 
 enum class TokenType{
     exit, _if, _else, // keywords
     // data types, example: the keyword 'int'
-    _int16, _int32, _int64, _string, _void, _let,
+    _int16, _int32, _int64, _string, _void, _let, _bool,
     // literal values like 1432 or "string value"
     lit_int, lit_string,
     // single char tokens

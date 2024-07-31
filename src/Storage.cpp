@@ -7,26 +7,22 @@ void Storage::StoreVariable(const std::string& ident, bool init, VarType type) {
 
     switch(type){
         case VarType::_char: // db
+        case VarType::_bool:
             var.size = 8;
             stack_size += 8;
             break;
-        case VarType::_int16: // dw
+        case VarType::_short: // dw
             var.size = 16;
             stack_size += 16;
             break;
-        case VarType::_float:
-        case VarType::_int32: // dd
+        case VarType::_int: // dd
             var.size = 32;
             stack_size += 32;
             break;
-        case VarType::_double:
-        case VarType::_int64: // dq
+        case VarType::_long: // dq
             var.size = 64;
             stack_size += 64;
             break;
-//        case VarType::_string: NOT IMPLEMENTED
-//            var.size = value.length();
-//            break;
     }
 
     if(scopes.size() > 0) {

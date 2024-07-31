@@ -2,12 +2,7 @@
 #pragma ide diagnostic ignored "LocalValueEscapesScope"
 #pragma once
 
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <cstdint>
-#include <sstream>
-
+#include "PCH.h"
 #include "Token.h"
 #include "Log.h"
 
@@ -29,6 +24,7 @@ private:
     std::unordered_map<std::string, TokenType> TokenDict = {
             {"exit", TokenType::exit},
             {"let", TokenType::_let},
+            {"bool", TokenType::_bool},
             {"int16", TokenType::_int16},
             {"short", TokenType::_int16},
             {"int", TokenType::_int32},
