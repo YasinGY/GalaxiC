@@ -13,7 +13,7 @@ extern is a keyword that loads in functions from assembly files which are linked
 
 #link which is releated to the linking process, it is just like `extern` but loads in a file instead using the linker
 
-if statements which are like in C
+C-like if statements
 
 In development:
 
