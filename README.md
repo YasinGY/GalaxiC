@@ -17,4 +17,4 @@ C-like if statements
 
 In development:
 
-Booleans, they were added but was removed because of bugs and are going to be implemented again soon better than ever!
+Booleans and Boolean Expressions
