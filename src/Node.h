@@ -66,18 +66,13 @@ namespace Node{
 
     struct BoolExpr;
 
-    struct BoolExprAnd{
-        BoolExpr* lhs;
-        BoolExpr* rhs;
-    };
-
-    struct BoolExprOr{
-        BoolExpr* lhs;
-        BoolExpr* rhs;
+    enum class LitBool{
+        _true, _false
     };
 
     enum class Comparison{
-        equal, greater, less, greater_equal, less_equal, not_equal
+        None = 0,
+        equal, not_equal, greater, greater_equal, less, less_equal
     };
 
     struct BoolTermInt{
@@ -90,8 +85,24 @@ namespace Node{
         BoolExpr* expr;
     };
 
+    struct BoolTermBool{
+        std::variant<LitBool, Ident*> lhs;
+        Comparison comp;
+        std::variant<LitBool, Ident*> rhs;
+    };
+
     struct BoolTerm{
-        std::variant<BoolTermInt*, BoolTermParen*> term;
+        std::variant<BoolTermInt*, BoolTermBool*, BoolTermParen*> term;
+    };
+
+    struct BoolExprAnd{
+        std::variant<BoolTerm*, BoolExpr*> lhs;
+        std::variant<BoolTerm*, BoolExpr*> rhs;
+    };
+
+    struct BoolExprOr{
+        std::variant<BoolTerm*, BoolExpr*> lhs;
+        std::variant<BoolTerm*, BoolExpr*> rhs;
     };
 
     struct BoolExpr{

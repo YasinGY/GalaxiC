@@ -20,12 +20,15 @@ private:
     Node::Term* parseTerm();
     std::optional<Node::Stmt*> parseStmt();
     bool isBinOp(const TokenType type);
-    bool isLogicOp();
+    bool isLitBool(TokenType type);
+    bool isIntIdent(const std::string& ident);
     int getBinPrec(TokenType type);
     Node::IntExpr* parseIntExpr(const int min_prec = 0);
+    VarType getIdentType(const std::string& ident);
     Node::BoolTerm* parseBoolTerm();
+    Node::Comparison parseComparison();
     Node::BoolExpr* parseBoolExpr();
-    void checkIfLastToken(const char* msg);
+    void checkIfLastToken(const std::string& msg, bool add_pos = true);
     std::string getNextTokenPos();
     TokenType getNextToken(bool newline = false);
 

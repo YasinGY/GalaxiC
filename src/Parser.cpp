@@ -10,6 +10,13 @@ Node::Term* Parser::parseTerm()  {
     Node::Term* term = m_allocator.alloc<Node::Term>();
 
     if(getNextToken() == TokenType::ident){
+        std::string ident = tokens.at(index).value.value();
+        if(!isIntIdent(ident)){
+            Log::Error("Expected an int identifier at " + getNextTokenPos() + " but got a type " + VarTypeToString(
+                    getIdentType(ident)));
+            exit(1);
+        }
+
         Node::Ident* id = m_allocator.alloc<Node::Ident>();
         id->value = tokens.at(index).value.value();
         term->term = id;
@@ -38,28 +45,32 @@ Node::Term* Parser::parseTerm()  {
     return term;
 }
 
-Node::BoolTerm* Parser::parseBoolTerm(){
-    auto term = m_allocator.alloc<Node::BoolTerm>();
-    auto term_int = m_allocator.alloc<Node::BoolTermInt>();
-    bool has_rhs_expr = true;
+VarType Parser::getIdentType(const std::string &ident) {
+    for(Node::Stmt* stmt : program.prg){
+        if(!std::holds_alternative<Node::Variable*>(stmt->stmt) && std::get<Node::Variable*>(stmt->stmt)->ident->value != ident)
+            continue;
 
-    if(getNextToken() == TokenType::expr_open) {
-        index++;
-        checkIfLastToken("Expected something after `(`");
-        auto expr = parseBoolExpr();
-        auto term_paren = m_allocator.alloc<Node::BoolTermParen>();
-        term_paren->expr = expr;
-        term->term = term_paren;
-        index++; // skip the `)` at the end of the parentheses
-        return term;
+        return std::get<Node::Variable*>(stmt->stmt)->type;
     }
 
-    Node::IntExpr* lhs = parseIntExpr();
-    term_int->lhs = lhs;
-    checkIfLastToken("Expected a comparison operator after the int expression");
+    Log::Error("Unknown identifier `" + ident + "` at " + getNextTokenPos());
+    exit(1);
+}
 
+bool Parser::isLitBool(TokenType type) {
+    return type == TokenType::_false || type == TokenType::_true;
+}
+
+bool Parser::isIntIdent(const std::string &ident) {
+    return
+    getIdentType(tokens.at(index).value.value()) == VarType::_short ||
+    getIdentType(tokens.at(index).value.value()) == VarType::_int ||
+    getIdentType(tokens.at(index).value.value()) == VarType::_long;
+}
+
+Node::Comparison Parser::parseComparison() {
     switch(getNextToken()) {
-        case TokenType::equal:{
+        case TokenType::equal: {
             index++;
             checkIfLastToken("Expected something after comparison operator equals");
             if (getNextToken() != TokenType::equal) {
@@ -68,8 +79,7 @@ Node::BoolTerm* Parser::parseBoolTerm(){
             }
             index++;
             checkIfLastToken("Expected something after `==`");
-            term_int->comp = Node::Comparison::equal;
-            break;
+            return Node::Comparison::equal;
         }
 
         case TokenType::_not: {
@@ -81,126 +91,158 @@ Node::BoolTerm* Parser::parseBoolTerm(){
             }
             index++;
             checkIfLastToken("Expected something after `!=`");
-            term_int->comp = Node::Comparison::not_equal;
-            break;
+            return Node::Comparison::not_equal;
         }
 
         case TokenType::greater_then: {
             index++;
             checkIfLastToken("Expected something after comparison operator `>`");
             if (getNextToken() != TokenType::equal) {
-                term_int->comp = Node::Comparison::greater;
                 checkIfLastToken("Expected something after `>`");
+                return Node::Comparison::greater;
             } else {
-                term_int->comp = Node::Comparison::greater_equal;
                 index++;
                 checkIfLastToken("Expected something after `>=`");
+                return Node::Comparison::greater_equal;
             }
-
-            break;
         }
 
-        case TokenType::less_then:{
+        case TokenType::less_then: {
             index++;
             checkIfLastToken("Expected something after comparison operator `<`");
             if (getNextToken() != TokenType::equal) {
-                term_int->comp = Node::Comparison::less;
                 checkIfLastToken("Expected something after `<`");
+                return Node::Comparison::less;
             } else {
-                term_int->comp = Node::Comparison::less_equal;
                 index++;
                 checkIfLastToken("Expected something after `<=`");
+                return Node::Comparison::less_equal;
+            }
+        }
+
+        default:
+            return Node::Comparison::None;
+    }
+}
+
+Node::BoolTerm* Parser::parseBoolTerm() {
+    checkIfLastToken("Expected a boolean expression term");
+
+    auto term = m_allocator.alloc<Node::BoolTerm>();
+    Token curr_token = tokens.at(index);
+
+    if(isLitBool(curr_token.type) || (curr_token.type == TokenType::ident && getIdentType(curr_token.value.value()) == VarType::_bool)){
+        auto bool_term = m_allocator.alloc<Node::BoolTermBool>();
+
+        if(curr_token.type == TokenType::ident){
+            auto ident = m_allocator.alloc<Node::Ident>();
+            ident->value = curr_token.value.value();
+            bool_term->lhs = ident;
+        }
+        else if(curr_token.type == TokenType::_true){
+            bool_term->lhs = Node::LitBool::_true;
+        }
+        else{
+            bool_term->lhs = Node::LitBool::_false;
+        }
+        index++;
+        checkIfLastToken("Expected a `;` to end the statement");
+
+        Node::Comparison comp = parseComparison();
+
+        if(comp != Node::Comparison::None){
+            bool_term->comp = comp;
+
+            if(getNextToken() == TokenType::ident){
+                auto rhs = m_allocator.alloc<Node::Ident>();
+                rhs->value = tokens.at(index).value.value();
+                bool_term->rhs = rhs;
+            }
+            else if(getNextToken() == TokenType::_true)
+                bool_term->rhs = Node::LitBool::_true;
+            else if(getNextToken() == TokenType::_false)
+                bool_term->rhs = Node::LitBool::_false;
+            else{
+                Log::Error("Expected a boolean to complete the boolean expression at " + getNextTokenPos());
+                exit(1);
             }
 
-            break;
+            index++;
+        }
+        else{
+            bool_term->comp = Node::Comparison::equal;
+            bool_term->rhs = Node::LitBool::_true;
         }
 
-        default: {
-            has_rhs_expr = false;
-            auto int_expr = m_allocator.alloc<Node::IntExpr>();
-            auto int_term = m_allocator.alloc<Node::Term>();
-            auto lit_int = m_allocator.alloc<Node::LitInt>();
-            lit_int->value = "0";
-            int_term->term = lit_int;
-            int_expr->var = int_term;
-            term_int->rhs = int_expr;
-            term_int->comp = Node::Comparison::not_equal;
-            term->term = term_int;
-            break;
-        }
+        term->term = bool_term;
     }
+    else if(curr_token.type == TokenType::lit_int || (curr_token.type == TokenType::ident && isIntIdent(curr_token.value.value()))){
+        auto int_expr = m_allocator.alloc<Node::BoolTermInt>();
 
-    if(has_rhs_expr) {
-        Node::IntExpr *rhs = parseIntExpr();
-        term_int->rhs = rhs;
-        term->term = term_int;
+        int_expr->lhs = parseIntExpr();
+        int_expr->comp = parseComparison();
+        int_expr->rhs = parseIntExpr();
+
+        term->term = int_expr;
+    }
+    else{
+        Log::Error("Expected a boolean term but got an unexpected token at " + getNextTokenPos());
+        exit(1);
     }
 
     return term;
 }
 
-bool Parser::isLogicOp(){
-    if(getNextToken() == TokenType::_and){
-        index++;
-        checkIfLastToken("Expected another `&` to make an `and` logic operator but reached the last token");
-        if(getNextToken() == TokenType::_and)
-            return true;
-        index--;
-    }
-    else if(getNextToken() == TokenType::_or){
-        index++;
-        checkIfLastToken("Expected another `|` to make an `or` logic operator but reached the last token");
-        if(getNextToken() == TokenType::_or)
-            return true;
-        index--;
-    }
-
-    return false;
-}
-
 Node::BoolExpr* Parser::parseBoolExpr(){
-    Node::BoolTerm* term_lhs = parseBoolTerm();
-    auto expr_lhs = m_allocator.alloc<Node::BoolExpr>();
-    expr_lhs->expr = term_lhs;
+    auto expr = m_allocator.alloc<Node::BoolExpr>();
+    auto term_lhs = parseBoolTerm();
 
-    if(index >= tokens.size() || !isLogicOp())
-        return expr_lhs;
+    if(getNextToken() != TokenType::_and && getNextToken() != TokenType::_or){
+        expr->expr = term_lhs;
+        return expr;
+    }
 
-    bool was_token_and_op = getNextToken() == TokenType::_and;
-    index++;
-    checkIfLastToken("Expected something after logical operator and, `&&`");
+    if(getNextToken() == TokenType::_and && index + 1 < tokens.size() && tokens.at(index + 1).type == TokenType::_and){
+        index++;
+        checkIfLastToken("Expected `&&` but only received `&`");
+        index++;
+        checkIfLastToken("Expected a boolean expression after and operator");
 
-    auto expr_rhs = parseBoolExpr();
+        auto expr_and = m_allocator.alloc<Node::BoolExprAnd>();
+        auto rhs = parseBoolExpr();
 
-    if(was_token_and_op){
-        auto return_expr = m_allocator.alloc<Node::BoolExpr>();
-        auto and_expr = m_allocator.alloc<Node::BoolExprAnd>();
-        and_expr->lhs = expr_lhs;
-        and_expr->rhs = expr_rhs;
-        return_expr->expr = and_expr;
-        return return_expr;
+        expr_and->lhs = term_lhs;
+        expr_and->rhs = rhs;
+        expr->expr = expr_and;
+    }
+    else if(getNextToken() == TokenType::_or && index + 1 < tokens.size() && tokens.at(index + 1).type == TokenType::_or){
+        index++;
+        checkIfLastToken("Expected `||` but only received `|`");
+        index++;
+        checkIfLastToken("Expected a boolean expression after or operator");
+
+        auto expr_or = m_allocator.alloc<Node::BoolExprOr>();
+        auto rhs = parseBoolExpr();
+
+        expr_or->lhs = term_lhs;
+        expr_or->rhs = rhs;
+        expr->expr = expr_or;
     }
     else{
-        auto return_expr = m_allocator.alloc<Node::BoolExpr>();
-        auto or_expr = m_allocator.alloc<Node::BoolExprOr>();
-        or_expr->lhs = expr_lhs;
-        or_expr->rhs = expr_rhs;
-        return_expr->expr = or_expr;
-        return return_expr;
+        // means that the first token as `&` or `|` but the second one was not
+        if(getNextToken() == TokenType::_and) {
+            index++;
+            Log::Error("Expected another `&` at " + getNextTokenPos());
+            exit(1);
+        }
+        else{
+            index++;
+            Log::Error("Expected another `|` at " + getNextTokenPos());
+            exit(1);
+        }
     }
-}
 
-bool Parser::isBinOp(const TokenType type) {
-    switch (type) {
-        case TokenType::plus:
-        case TokenType::minus:
-        case TokenType::star:
-        case TokenType::slash:
-        case TokenType::percent:
-            return true;
-        default:
-            return false;
-    }
+    return expr;
 }
 
 int Parser::getBinPrec(const TokenType type) {
@@ -214,6 +256,19 @@ int Parser::getBinPrec(const TokenType type) {
             return 1;
         default:
             return -1;
+    }
+}
+
+bool Parser::isBinOp(const TokenType type) {
+    switch (type) {
+        case TokenType::plus:
+        case TokenType::minus:
+        case TokenType::star:
+        case TokenType::slash:
+        case TokenType::percent:
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -300,7 +355,7 @@ std::string Parser::getNextTokenPos() {
     return str.str();
 }
 
-void Parser::checkIfLastToken(const char *msg) {
+void Parser::checkIfLastToken(const std::string& msg, bool add_pos) {
     if(index >= tokens.size()){
         std::stringstream str;
         str << msg << " at " << tokens.at(index - 1).line << ':' << tokens.at(index - 1).col;
@@ -421,7 +476,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             checkIfLastToken("Expected an identifier name after `bool` token");
 
             if(getNextToken() != TokenType::ident){
-                Log::Error("Expected an identifier name after `bool` token");
+                Log::Error("Expected an identifier name after `bool` token at " + getNextTokenPos());
                 exit(1);
             }
 
@@ -457,7 +512,8 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                 return stmt;
             }
             else{
-                Log::Error("Expected a `;` to declare a boolean variable and end the line or an expression for declaring it");
+                Log::Error("Expected a `;` to declare a boolean variable and end the line or an expression for declaring it at " +
+                getNextTokenPos());
                 exit(1);
             }
         }

@@ -32,12 +32,6 @@ void Storage::StoreVariable(const std::string& ident, bool init, VarType type) {
 
     variables.emplace_back(var);
 }
-bool Storage::IdentExists(const std::string &ident) {
-    for(Variable var : variables)
-        if(var.ident == ident)
-            return true;
-    return false;
-}
 bool Storage::IsIdentInit(const std::string &ident) {
     for(Variable var : variables) {
         if (var.ident != ident)

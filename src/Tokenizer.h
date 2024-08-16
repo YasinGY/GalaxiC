@@ -24,6 +24,8 @@ private:
     std::unordered_map<std::string, TokenType> TokenDict = {
             {"exit", TokenType::exit},
             {"let", TokenType::_let},
+            {"true", TokenType::_true},
+            {"false", TokenType::_false},
             {"bool", TokenType::_bool},
             {"int16", TokenType::_int16},
             {"short", TokenType::_int16},

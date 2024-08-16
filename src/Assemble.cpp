@@ -1,7 +1,7 @@
 #include "Assemble.h"
 
 void Assemble::Store() {
-    std::ofstream file(output_path.substr(0, output_path.length() - 4) + ".s");
+    std::ofstream file(output_path.substr(0, output_path.length() - 4) + ".asm");
     file << content;
     file.close();
 }
@@ -9,7 +9,7 @@ void Assemble::Store() {
 void Assemble::AssembleFile() {
     system(std::string("nasm -f " +
         std::string((target == PLATFORM_WIN32) ? "win32 " : "win64 ") +
-        output_path.substr(0, output_path.length() - 4) + ".s -o " +
+        output_path.substr(0, output_path.length() - 4) + ".asm -o " +
         output_path.substr(0, output_path.length() - 4) + ".o"
     ).c_str());
 }
