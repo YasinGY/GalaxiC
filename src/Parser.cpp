@@ -620,6 +620,11 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
 
             auto stmt = parseStmt();
 
+            if(!stmt.has_value()){
+                Log::Error("Expected a statement or scope to end the if statement at " + getNextTokenPos());
+                exit(1);
+            }
+
             if (!std::holds_alternative<Node::Scope *>(stmt.value()->stmt)) {
                 auto scope = m_allocator.alloc<Node::Scope>();
                 scope->stmts.emplace_back(stmt.value());
@@ -666,6 +671,11 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                 auto stmt = parseStmt(); // guaranteed a value
                 auto scope = m_allocator.alloc<Node::Scope>();
 
+                if(!stmt.has_value()){
+                    Log::Error("Expected a statement or scope to end the else if statement at " + getNextTokenPos());
+                    exit(1);
+                }
+
                 if (!std::holds_alternative<Node::Scope *>(stmt.value()->stmt))
                     scope->stmts.emplace_back(stmt.value());
                 else
@@ -675,7 +685,7 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
                 else_stmt->stmt = scope;
                 else_stmt->expr = expr;
 
-                auto return_stmt = new Node::Stmt();
+                auto return_stmt = m_allocator.alloc<Node::Stmt>();
                 return_stmt->stmt = else_stmt;
                 return return_stmt;
             }
@@ -683,6 +693,11 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             /// Else
             auto stmt = parseStmt(); // guaranteed a value
             auto scope = m_allocator.alloc<Node::Scope>();
+
+            if(!stmt.has_value()){
+                Log::Error("Expected a statement or scope to end the else statement at " + getNextTokenPos());
+                exit(1);
+            }
 
             if (!std::holds_alternative<Node::Scope *>(stmt.value()->stmt))
                 scope->stmts.emplace_back(stmt.value());
@@ -692,9 +707,59 @@ std::optional<Node::Stmt*> Parser::parseStmt(){
             auto else_stmt = m_allocator.alloc<Node::Else>();
             else_stmt->stmt = scope;
 
-            auto return_stmt = new Node::Stmt();
+            auto return_stmt = m_allocator.alloc<Node::Stmt>();
             return_stmt->stmt = else_stmt;
             return return_stmt;
+        }
+
+        /// WHILE LOOPS
+        case TokenType::_while: {
+            auto stmt = m_allocator.alloc<Node::Stmt>();
+            auto _while = m_allocator.alloc<Node::While>();
+
+            index++;
+            checkIfLastToken("Expected a condition after token `while`");
+
+            if(getNextToken() != TokenType::expr_open){
+                Log::Error("Expected `(` followed up with with a condition at " + getNextTokenPos());
+                exit(1);
+            }
+            index++;
+            checkIfLastToken("Expected a condition after `while(`");
+
+            auto expr = parseBoolExpr();
+            _while->expr = expr;
+
+            if(getNextToken() != TokenType::expr_close){
+                Log::Error("Expected an `)` to close-off the condition at " + getNextTokenPos());
+                exit(1);
+            }
+            index++;
+            checkIfLastToken("Expected a statment or scope after the while statement");
+
+            if(getNextToken() == TokenType::semi){
+                stmt->stmt = _while;
+                return stmt;
+            }
+
+            auto scope = parseStmt();
+
+            if(!scope.has_value()){
+                Log::Error("Expected a statment or scope after the while statement at " + getNextTokenPos());
+                exit(1);
+            }
+
+            if(std::holds_alternative<Node::Scope*>(scope.value()->stmt)){
+                _while->scope = std::get<Node::Scope*>(scope.value()->stmt);
+            }
+            else{
+                auto wrapped_stmt = m_allocator.alloc<Node::Scope>();
+                wrapped_stmt->stmts.emplace_back(scope.value());
+                _while->scope = wrapped_stmt;
+            }
+
+            stmt->stmt = _while;
+            return stmt;
         }
 
             /// REASSIGNMENT

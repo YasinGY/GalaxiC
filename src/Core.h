@@ -1,9 +1,19 @@
 #pragma once
 
+#include <iostream>
+
 #define PLATFORM_WIN32      0
 #define PLATFORM_WIN64      1
 #define PLATFORM_LINUX32    2
 #define PLATFORM_LINUX64    3
+
+#define ASSERT(msg) { \
+    std::cerr << "[ASSERTION] from function " << __FUNCTION__ \
+              << " at line " << __LINE__ \
+              << " in file " << __FILE__ << ", " \
+              << msg << std::endl; \
+    std::abort(); \
+}
 
 /*
  *      14/5: 505 lines - start (almost)!

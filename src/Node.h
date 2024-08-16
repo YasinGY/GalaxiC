@@ -152,6 +152,11 @@ namespace Node{
         Scope* stmt;
     };
 
+    struct While{
+        BoolExpr* expr;
+        std::optional<Scope*> scope;
+    };
+
     enum class Asm_Section{
         text, data, bss, external
     };
@@ -162,7 +167,7 @@ namespace Node{
     };
 
     struct Stmt{
-        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*, Assembly*, Elif*, Else*> stmt;
+        std::variant<Exit*, Link*, Variable*, Scope*, If*, Reassign*, Assembly*, Elif*, Else*, While*> stmt;
     };
 
     struct Program{

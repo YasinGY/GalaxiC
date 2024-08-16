@@ -208,7 +208,7 @@ void Generator::GenBoolTerm(const Node::BoolTerm *term, const std::string reg) {
 }
 
 /// Puts 0 in the argument `reg` if false and 1 if its true
-void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg) {
+void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg, const bool continue_last_label) {
     struct BoolExprVisitor{
         Generator& gen;
         BoolExprVisitor(Generator& generator) : gen(generator) {}
@@ -239,9 +239,6 @@ void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg) {
             gen.code.text << "mov " << gen.bit << "ax, 1\n";
             gen.code.text << "jmp " << gen.labels.getLastLabel(false) << '\n';
             gen.labels.addBoolLabel();
-
-            gen.code.text << gen.labels.getLastLabel() << ":\n";
-            gen.labels.addCurrentLabel();
         }
 
         void operator()(const Node::BoolExprOr* expr){
@@ -265,14 +262,16 @@ void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg) {
             gen.code.text << "mov " << gen.bit << "ax, 1\n";
             gen.code.text << "jmp " << gen.labels.getLastLabel(false) << '\n';
             gen.labels.addBoolLabel();
-
-            gen.code.text << gen.labels.getLastLabel() << ":\n";
-            gen.labels.addCurrentLabel();
         }
     };
 
     BoolExprVisitor visitor(*this);
     std::visit(visitor, expr->expr);
+
+    if(continue_last_label) {
+        code.text << labels.getLastLabel() << ":\n";
+        labels.addCurrentLabel();
+    }
 
     if(reg != bit + "ax")
         code.text << "mov " << reg << ", " << bit << "ax\n";
@@ -493,6 +492,34 @@ void Generator::Generate(const Node::Stmt* stmt) {
             gen.code.text << "jmp " << gen.labels.getMainLabel(false) << '\n';
             gen.code.text << gen.labels.getMainLabel() << ":\n";
             gen.labels.addMainLabel();
+        }
+
+        void operator()(const Node::While* stmt){
+            std::string temp_label = gen.labels.getTempLabel(false);
+            gen.code.text << "jmp " << temp_label << '\n';
+            gen.code.text << gen.labels.getTempLabel() << ":\n";
+            gen.labels.addTempLabel();
+
+            gen.GenBoolExpr(stmt->expr, gen.bit + "ax", false);
+            gen.code.text << "cmp " << gen.bit << "ax, 1\n";
+            gen.code.text << "je " << gen.labels.getLoopLabel(false) << '\n';
+            gen.code.text << "jmp " << gen.labels.getLastLabel() << '\n';
+
+            gen.code.text << gen.labels.getLoopLabel() << ":\n";
+            gen.labels.addLoopLabel();
+
+            if(stmt->scope.has_value()){
+                auto send_stmt = new Node::Stmt();
+                send_stmt->stmt = stmt->scope.value();
+
+                gen.Generate(send_stmt);
+                free(send_stmt);
+            }
+
+            gen.code.text << "jmp " << temp_label << '\n';
+
+            gen.code.text << gen.labels.getLastLabel() << ":\n";
+            gen.labels.addLastLabel();
         }
     };
 

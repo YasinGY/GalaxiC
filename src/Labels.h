@@ -13,11 +13,12 @@ public:
         m_BoolLabels = 0;
         m_IfLabels = 0;
         m_ChainLabels = 0;
+        m_LoopLabels = 0;
     }
 
     enum class LabelType{
         None = 0,
-        main, temp, _if, _bool, chain
+        main, temp, _if, _bool, chain, loop
     };
 
     inline void addMainLabel() { m_MainLabels++; }
@@ -25,6 +26,7 @@ public:
     inline void addBoolLabel() { m_BoolLabels++; }
     inline void addIfLabel() { m_IfLabels++; }
     inline void addChainLabel() { m_ChainLabels++; }
+    inline void addLoopLabel() { m_LoopLabels++; }
 
     inline void addLastLabel() {
         switch(m_LastLabel){
@@ -42,6 +44,9 @@ public:
                 return;
             case LabelType::chain:
                 addChainLabel();
+                return;
+            case LabelType::loop:
+                addLoopLabel();
                 return;
             default:
                 Log::Error("How has this happened?");
@@ -64,6 +69,9 @@ public:
                 return;
             case LabelType::chain:
                 addChainLabel();
+                return;
+            case LabelType::loop:
+                addLoopLabel();
                 return;
             default:
                 Log::Error("How has this happened?");
@@ -106,6 +114,13 @@ public:
         }
         return "chain" + std::to_string(m_ChainLabels);
     }
+    inline std::string getLoopLabel(const bool declared_label = true){
+        if(declared_label) {
+            m_LastLabel = m_CurrentLabel;
+            m_CurrentLabel = LabelType::loop;
+        }
+        return "loop" + std::to_string(m_LoopLabels);
+    }
 
     inline std::string getLastLabel(const bool declared_label = true){
         switch(m_LastLabel){
@@ -119,6 +134,8 @@ public:
                 return getBoolLabel(declared_label);
             case LabelType::chain:
                 return getChainLabel(declared_label);
+            case LabelType::loop:
+                return getLoopLabel(declared_label);
         }
 
         return "";
@@ -136,6 +153,8 @@ public:
                 return getBoolLabel(declared_label);
             case LabelType::chain:
                 return getChainLabel(declared_label);
+            case LabelType::loop:
+                return getLoopLabel(declared_label);
         }
 
         return "";
@@ -153,6 +172,8 @@ public:
                 return m_IfLabels;
             case LabelType::chain:
                 return m_ChainLabels;
+            case LabelType::loop:
+                return m_LoopLabels;
         }
         return -1;
     }
@@ -177,6 +198,10 @@ public:
             case LabelType::chain:
                 m_LastLabel = m_CurrentLabel;
                 m_CurrentLabel = LabelType::chain;
+
+            case LabelType::loop:
+                m_LastLabel = m_CurrentLabel;
+                m_CurrentLabel = LabelType::loop;
         }
     }
 
@@ -189,5 +214,6 @@ private:
     uint64_t m_IfLabels;
     uint64_t m_BoolLabels;
     uint64_t m_ChainLabels;
+    uint64_t m_LoopLabels;
 };
 #pragma clang diagnostic pop

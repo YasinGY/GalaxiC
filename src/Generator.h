@@ -37,6 +37,7 @@ public:
         for(index = 0; index <= prg->prg.size() - 1; index++)
             Generate(prg->prg.at(index));
 
+        code.text << "add " << bit << "sp, " << storage.GetStackSize() << '\n';
         code.text << "mov " << bit << "ax, 0\n";
         code.text << "ret\n";
 
@@ -55,7 +56,7 @@ private:
     void GenTerm(const Node::Term* term, const std::string reg);
     void GenExpr(const Node::IntExpr* expr, const std::string reg);
     void GenBinExpr(const Node::BinExpr* expr);
-    void GenBoolExpr(const Node::BoolExpr* expr, const std::string reg);
+    void GenBoolExpr(const Node::BoolExpr* expr, const std::string reg, const bool continue_last_label = true);
     void GenBoolTerm(const Node::BoolTerm* term, const std::string reg);
     bool isExprInit(const Node::Expr* expr);
     void Generate(const Node::Stmt* stmt);

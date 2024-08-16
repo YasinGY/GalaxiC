@@ -40,6 +40,7 @@ private:
             {"link", TokenType::link},
             {"void", TokenType::_void},
             {"if", TokenType::_if},
+            {"while", TokenType::_while},
             {"else", TokenType::_else},
             {"_asm_text", TokenType::_asm_text},
             {"_asm_data", TokenType::_asm_data},

@@ -8,7 +8,6 @@
 class Storage{
 public:
     void StoreVariable(const std::string& ident, bool init, VarType type);
-    bool IdentExists(const std::string& ident);
     bool IsIdentInit(const std::string& ident);
     uint64_t GetStackPosition(const std::string& ident);
     inline uint64_t GetStackSize() { return stack_size; }
