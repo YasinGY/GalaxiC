@@ -78,60 +78,55 @@ void Generator::GenExpr(const Node::IntExpr* expr, const std::string reg) {
     }
 }
 
+
 void Generator::GenBoolTerm(const Node::BoolTerm *term, const std::string reg) {
     if(std::holds_alternative<Node::BoolTermInt*>(term->term)){
         auto int_term = std::get<Node::BoolTermInt*>(term->term);
 
-        GenExpr(int_term->lhs, bit + "10");
-        GenExpr(int_term->rhs, bit + "11");
+        GenExpr(int_term->lhs, bit + "12");
+        GenExpr(int_term->lhs, bit + "13");
 
         code.text << "mov " << bit << "ax, 0\n";
-        code.text << "cmp r10, r11\n";
+        code.text << "cmp " << bit << "12, " << bit << "13\n";
 
         switch(int_term->comp){
             case Node::Comparison::equal:
-                code.text << "je " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "je " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
             case Node::Comparison::not_equal:
-                code.text << "jne " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "jne " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
             case Node::Comparison::greater:
-                code.text << "jg " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "jg " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
             case Node::Comparison::greater_equal:
-                code.text << "jg " << labels.getBoolLabel(false) << '\n';
-                code.text << "je " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "jg " << labels.GetBoolLabel() << '\n';
+                code.text << "je " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
             case Node::Comparison::less:
-                code.text << "jl " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "jl " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
             case Node::Comparison::less_equal:
-                code.text << "jl " << labels.getBoolLabel(false) << '\n';
-                code.text << "je " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "jl " << labels.GetBoolLabel() << '\n';
+                code.text << "je " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
         }
     }
@@ -139,69 +134,71 @@ void Generator::GenBoolTerm(const Node::BoolTerm *term, const std::string reg) {
     else if(std::holds_alternative<Node::BoolTermBool*>(term->term)){
         auto bool_term = std::get<Node::BoolTermBool*>(term->term);
 
-        // Left side
+        /// Left hand side
         if(std::holds_alternative<Node::LitBool>(bool_term->lhs)){
             if(std::get<Node::LitBool>(bool_term->lhs) == Node::LitBool::_true)
-                code.text << "mov " << bit << "10, 1\n";
+                code.text << "mov " << bit << "12, 1\n";
             else
-                code.text << "mov " << bit << "10, 0\n";
+                code.text << "mov " << bit << "12, 0\n";
         }
-        else{
-            std::string ident = std::get<Node::Ident*>(bool_term->lhs)->value;
+        else if(std::holds_alternative<Node::Ident*>(bool_term->lhs)){
+            auto ident = std::get<Node::Ident*>(bool_term->lhs)->value;
 
             if(!storage.IsIdentInit(ident)){
-                Log::Error("Ident `" + ident + "` was never initialized");
+                Log::Error("Identifier \'" + ident + "\' was never initialized");
                 exit(1);
             }
 
-            code.text << "mov " << bit << "10, [" << bit << "sp + " << storage.GetStackPosition(ident) << "]\n";
+            code.text << "mov " << bit << "12, [" << bit << "sp + " << storage.GetStackPosition(ident) << "]\n";
         }
 
-        // Right side
+        /// Right hand side
         if(std::holds_alternative<Node::LitBool>(bool_term->rhs)){
             if(std::get<Node::LitBool>(bool_term->rhs) == Node::LitBool::_true)
-                code.text << "mov " << bit << "11, 1\n";
+                code.text << "mov " << bit << "13, 1\n";
             else
-                code.text << "mov " << bit << "11, 0\n";
+                code.text << "mov " << bit << "13, 0\n";
         }
-        else{
-            std::string ident = std::get<Node::Ident*>(bool_term->rhs)->value;
+        else if(std::holds_alternative<Node::Ident*>(bool_term->rhs)){
+            auto ident = std::get<Node::Ident*>(bool_term->rhs)->value;
 
             if(!storage.IsIdentInit(ident)){
-                Log::Error("Ident `" + ident + "` was never initialized");
+                Log::Error("Identifier \'" + ident + "\' was never initialized");
                 exit(1);
             }
 
-            code.text << "mov " << bit << "11, [" << bit << "sp + " << storage.GetStackPosition(ident) << "]\n";
+            code.text << "mov " << bit << "13, [" << bit << "sp + " << storage.GetStackPosition(ident) << "]\n";
         }
 
-        code.text << "mov " << bit << "ax, 1\n";
-        code.text << "cmp r10, r11\n";
-        switch(bool_term->comp) {
+        code.text << "mov " << bit << "ax, 0\n";
+        code.text << "cmp " << bit << "12, " << bit << "13\n";
+        switch(bool_term->comp){
             case Node::Comparison::equal:
-                code.text << "je " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "je " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
+
             case Node::Comparison::not_equal:
-                code.text << "jne " << labels.getBoolLabel(false) << '\n';
-                code.text << "jmp " << labels.getCurrentLabel(false) << '\n';
-                code.text << labels.getBoolLabel() << ":\n";
-                code.text << "mov " << bit << "ax, 1\n";
-                labels.addBoolLabel();
+                code.text << "jne " << labels.GetBoolLabel() << '\n';
+                code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+                code.text << labels.GetBoolLabel() << ":\n";
+                labels.AddLabel(Label::LabelTypes::_bool, true);
                 break;
         }
     }
-
     else{
         GenBoolExpr(std::get<Node::BoolTermParen*>(term->term)->expr, reg);
         return;
     }
 
-    code.text << labels.getLastLabel() << ":\n";
-    labels.addCurrentLabel();
+    code.text << "mov " << bit << "ax, 1\n";
+    labels.EndLabel();
+
+    code.text << "jmp " << labels.GetCurrentLabel() << '\n';
+    code.text << labels.GetCurrentLabel() << ":\n";
+    labels.AddLabel(labels.GetCurrentLabelType(), true);
 
     if(reg != bit + "ax")
         code.text << "mov " << reg << ", " << bit << "ax\n";
@@ -219,63 +216,74 @@ void Generator::GenBoolExpr(const Node::BoolExpr *expr, const std::string reg, c
 
         void operator()(const Node::BoolExprAnd* expr){
             if(std::holds_alternative<Node::BoolTerm*>(expr->lhs))
-                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->lhs), gen.bit + "8");
+                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->lhs), gen.bit + "12");
             else
-                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->lhs), gen.bit + "8");
+                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->lhs), gen.bit + "12");
 
             if(std::holds_alternative<Node::BoolTerm*>(expr->rhs))
-                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->rhs), gen.bit + "9");
+                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->rhs), gen.bit + "13");
             else
-                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->rhs), gen.bit + "9");
+                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->rhs), gen.bit + "13");
 
-
-            gen.code.text << "cmp " << gen.bit << "8, 0" << '\n';
-            gen.code.text << "je " << gen.labels.getCurrentLabel(false) << '\n';
-            gen.code.text << "cmp " << gen.bit << "9, 0" << '\n';
-            gen.code.text << "je " << gen.labels.getCurrentLabel(false) << '\n';
-            gen.code.text << "jmp " << gen.labels.getBoolLabel(false) << '\n';
-
-            gen.code.text << gen.labels.getBoolLabel() << ":\n";
+            gen.code.text << "cmp " << gen.bit << "12, 0\n";
+            gen.code.text << "je " << gen.labels.GetCurrentLabel() << '\n';
+            gen.code.text << "cmp " << gen.bit << "13, 0\n";
+            gen.code.text << "je " << gen.labels.GetCurrentLabel() << '\n';
             gen.code.text << "mov " << gen.bit << "ax, 1\n";
-            gen.code.text << "jmp " << gen.labels.getLastLabel(false) << '\n';
-            gen.labels.addBoolLabel();
-        }
+            gen.code.text << "jmp " << gen.labels.GetCurrentLabel() << '\n';
 
-        void operator()(const Node::BoolExprOr* expr){
-            if(std::holds_alternative<Node::BoolTerm*>(expr->lhs))
-                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->lhs), gen.bit + "8");
-            else
-                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->lhs), gen.bit + "8");
-
-            if(std::holds_alternative<Node::BoolTerm*>(expr->rhs))
-                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->rhs), gen.bit + "9");
-            else
-                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->rhs), gen.bit + "9");
-
-            gen.code.text << "cmp " << gen.bit << "8, 1" << '\n';
-            gen.code.text << "je " << gen.labels.getBoolLabel(false) << '\n';
-            gen.code.text << "cmp " << gen.bit << "9, 1" << '\n';
-            gen.code.text << "je " << gen.labels.getBoolLabel(false) << '\n';
-            gen.code.text << "jmp " << gen.labels.getCurrentLabel(false) << '\n';
-
-            gen.code.text << gen.labels.getBoolLabel() << ":\n";
-            gen.code.text << "mov " << gen.bit << "ax, 1\n";
-            gen.code.text << "jmp " << gen.labels.getLastLabel(false) << '\n';
-            gen.labels.addBoolLabel();
+            gen.code.text << gen.labels.GetCurrentLabel() << ":\n";
+            gen.labels.AddLabel(gen.labels.GetCurrentLabelType(), true);
         }
     };
-
-    BoolExprVisitor visitor(*this);
-    std::visit(visitor, expr->expr);
-
-    if(continue_last_label) {
-        code.text << labels.getLastLabel() << ":\n";
-        labels.addCurrentLabel();
-    }
-
-    if(reg != bit + "ax")
-        code.text << "mov " << reg << ", " << bit << "ax\n";
 }
+//            gen.code.text << "cmp " << gen.bit << "8, 0" << '\n';
+//            gen.code.text << "je " << gen.labels.getCurrentLabel(false) << '\n';
+//            gen.code.text << "cmp " << gen.bit << "9, 0" << '\n';
+//            gen.code.text << "je " << gen.labels.getCurrentLabel(false) << '\n';
+//            gen.code.text << "jmp " << gen.labels.getBoolLabel(false) << '\n';
+//
+//            gen.code.text << gen.labels.getBoolLabel() << ":\n";
+//            gen.code.text << "mov " << gen.bit << "ax, 1\n";
+//            gen.code.text << "jmp " << gen.labels.getLastLabel(false) << '\n';
+//            gen.labels.addBoolLabel();
+//        }
+//
+//        void operator()(const Node::BoolExprOr* expr){
+//            if(std::holds_alternative<Node::BoolTerm*>(expr->lhs))
+//                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->lhs), gen.bit + "8");
+//            else
+//                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->lhs), gen.bit + "8");
+//
+//            if(std::holds_alternative<Node::BoolTerm*>(expr->rhs))
+//                gen.GenBoolTerm(std::get<Node::BoolTerm*>(expr->rhs), gen.bit + "9");
+//            else
+//                gen.GenBoolExpr(std::get<Node::BoolExpr*>(expr->rhs), gen.bit + "9");
+//
+//            gen.code.text << "cmp " << gen.bit << "8, 1" << '\n';
+//            gen.code.text << "je " << gen.labels.getBoolLabel(false) << '\n';
+//            gen.code.text << "cmp " << gen.bit << "9, 1" << '\n';
+//            gen.code.text << "je " << gen.labels.getBoolLabel(false) << '\n';
+//            gen.code.text << "jmp " << gen.labels.getCurrentLabel(false) << '\n';
+//
+//            gen.code.text << gen.labels.getBoolLabel() << ":\n";
+//            gen.code.text << "mov " << gen.bit << "ax, 1\n";
+//            gen.code.text << "jmp " << gen.labels.getLastLabel(false) << '\n';
+//            gen.labels.addBoolLabel();
+//        }
+//    };
+//
+//    BoolExprVisitor visitor(*this);
+//    std::visit(visitor, expr->expr);
+//
+//    if(continue_last_label) {
+//        code.text << labels.getLastLabel() << ":\n";
+//        labels.addCurrentLabel();
+//    }
+//
+//    if(reg != bit + "ax")
+//        code.text << "mov " << reg << ", " << bit << "ax\n";
+//}
 
 void Generator::Generate(const Node::Stmt* stmt) {
 
@@ -406,7 +414,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
                 gen.code.text << "je " << gen.labels.getCurrentLabel(false) << '\n'; // its 0/false
-                gen.code.text << "jmp" << gen.labels.getIfLabel(false) << '\n';
+                gen.code.text << "jmp " << gen.labels.getIfLabel(false) << '\n';
 
                 gen.code.text << gen.labels.getIfLabel() << ":\n";
                 gen.labels.addIfLabel();
@@ -416,7 +424,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 gen.Generate(send_stmt); // generates the scope
                 free(send_stmt);
 
-                gen.code.text << "jmp" << gen.labels.getCurrentLabel(false) << '\n';
+                gen.code.text << "jmp " << gen.labels.getCurrentLabel(false) << '\n';
 
                 gen.code.text << gen.labels.getCurrentLabel() << ":\n";
                 gen.labels.addCurrentLabel();
@@ -434,7 +442,7 @@ void Generator::Generate(const Node::Stmt* stmt) {
                 gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
                 gen.code.text << "cmp " << gen.bit << "ax, 0\n";
                 gen.code.text << "je " << gen.labels.getIfLabel(false) << '\n';    // if false
-                gen.code.text << "jmp" << gen.labels.getChainLabel(false) << '\n'; // if true
+                gen.code.text << "jmp " << gen.labels.getChainLabel(false) << '\n'; // if true
                 gen.code.text << gen.labels.getChainLabel() << ":\n";
                 gen.labels.addChainLabel();
                 uint64_t if_label_amount = gen.labels.getLabelAmount(Label::LabelType::_if);
@@ -495,31 +503,35 @@ void Generator::Generate(const Node::Stmt* stmt) {
         }
 
         void operator()(const Node::While* stmt){
-            std::string temp_label = gen.labels.getTempLabel(false);
-            gen.code.text << "jmp " << temp_label << '\n';
-            gen.code.text << gen.labels.getTempLabel() << ":\n";
-            gen.labels.addTempLabel();
+            std::string calculation_label = gen.labels.getBoolLabel();
+            gen.labels.addBoolLabel();
 
-            gen.GenBoolExpr(stmt->expr, gen.bit + "ax", false);
-            gen.code.text << "cmp " << gen.bit << "ax, 1\n";
-            gen.code.text << "je " << gen.labels.getLoopLabel(false) << '\n';
-            gen.code.text << "jmp " << gen.labels.getLastLabel() << '\n';
-
-            gen.code.text << gen.labels.getLoopLabel() << ":\n";
+            std::string scope_label = gen.labels.getLoopLabel(false);
             gen.labels.addLoopLabel();
 
-            if(stmt->scope.has_value()){
-                auto send_stmt = new Node::Stmt();
-                send_stmt->stmt = stmt->scope.value();
-
-                gen.Generate(send_stmt);
-                free(send_stmt);
-            }
-
-            gen.code.text << "jmp " << temp_label << '\n';
-
-            gen.code.text << gen.labels.getLastLabel() << ":\n";
+            std::string end_label = gen.labels.getLastLabel(false);
+            Label::LabelType end_label_type = gen.labels.LastLabel;
             gen.labels.addLastLabel();
+
+            gen.code.text << "jmp " << calculation_label << "\n";
+
+            gen.code.text << calculation_label << ":\n";
+            gen.GenBoolExpr(stmt->expr, gen.bit + "ax");
+            gen.code.text << "cmp " << gen.bit << "ax, 0\n";
+            gen.code.text << "je " << end_label << '\n';
+            gen.code.text << "jmp " << scope_label << '\n';
+
+            if(stmt->scope.has_value()){
+                auto wrapped_stmt = new Node::Stmt();
+                wrapped_stmt->stmt = stmt->scope.value();
+                gen.Generate(wrapped_stmt);
+
+                free(wrapped_stmt);
+            }
+            gen.code.text << "jmp " << calculation_label << '\n';
+
+            gen.code.text << end_label << ":\n";
+            gen.labels.setLabelAsCurrent(end_label_type);
         }
     };
 

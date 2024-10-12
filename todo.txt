@@ -1,0 +1,36 @@
+First release:
+
+    nested loops, ifs and scopes                difficulty: Medium
+    for loops;                                  difficulty: Medium Easy
+    functions;                                  difficulty: Medium Hard
+    floats, doubles and literal floats;         difficulty: Hard
+    chars;                                      difficulty: Hard
+    arrays;                                     difficulty: Hard
+    importing;                                  difficulty: Medium Hard
+    Console Libraries;                          difficulty: Medium
+    Math Libraries;                             difficulty: Easy
+    structs;                                    difficulty: Easy - Medium Easy
+
+Extra:
+
+    basic pointers;                             difficulty: Medium
+    classes (hopefully);                        difficulty: Very, Very Hard
+    function overloading (for classes);         difficulty: Medium
+    Graphical Libraries;                        difficulty: Extremely Hard
+
+
+
+
+
+
+
+
+
+
+
+Add !some_bool_var by checking if the first token is `!` and the token after which should be an ident is a boolean variable
+The same should be done with deciding if you should parse an int boolean expression or a bool boolean expression
+This should be done in the parseBoolTerm function
+add true and false in the parsing
+
+Parsing is Done!

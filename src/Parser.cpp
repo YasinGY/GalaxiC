@@ -197,6 +197,11 @@ Node::BoolExpr* Parser::parseBoolExpr(){
     auto expr = m_allocator.alloc<Node::BoolExpr>();
     auto term_lhs = parseBoolTerm();
 
+    if(getNextToken() == TokenType::greater_then || getNextToken() == TokenType::less_then){
+        Log::Error("Can\'t use \'<\' or \'>\' to compare boolean values at " + getNextTokenPos());
+        exit(1);
+    }
+
     if(getNextToken() != TokenType::_and && getNextToken() != TokenType::_or){
         expr->expr = term_lhs;
         return expr;
